@@ -1,0 +1,65 @@
+{
+	"/": [
+		"src/routes/+page.ts",
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/api/image-proxy": [
+		"src/routes/api/image-proxy/+server.ts"
+	],
+	"/api/sources": [
+		"src/routes/api/sources/+server.ts"
+	],
+	"/api/[sourceId]/chapter/[chapterId]/pages": [
+		"src/routes/api/[sourceId]/chapter/[chapterId]/pages/+server.ts"
+	],
+	"/api/[sourceId]/filters": [
+		"src/routes/api/[sourceId]/filters/+server.ts"
+	],
+	"/api/[sourceId]/list": [
+		"src/routes/api/[sourceId]/list/+server.ts"
+	],
+	"/api/[sourceId]/manga/[mangaId]": [
+		"src/routes/api/[sourceId]/manga/[mangaId]/+server.ts"
+	],
+	"/api/[sourceId]/manga/[mangaId]/chapters": [
+		"src/routes/api/[sourceId]/manga/[mangaId]/chapters/+server.ts"
+	],
+	"/api/[sourceId]/manga/[mangaId]/chapters/[chapterId]/pages": [
+		"src/routes/api/[sourceId]/manga/[mangaId]/chapters/[chapterId]/pages/+server.ts"
+	],
+	"/api/[sourceId]/search": [
+		"src/routes/api/[sourceId]/search/+server.ts"
+	],
+	"/explore": [
+		"src/routes/+layout.ts"
+	],
+	"/history": [
+		"src/routes/+layout.ts"
+	],
+	"/library": [
+		"src/routes/+layout.ts"
+	],
+	"/manga/[sourceId]/[mangaId]": [
+		"src/routes/manga/[sourceId]/[mangaId]/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/manga/[sourceId]/[mangaId]/[chapterId]": [
+		"src/routes/manga/[sourceId]/[mangaId]/[chapterId]/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/search": [
+		"src/routes/search/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/settings": [
+		"src/routes/+layout.ts"
+	],
+	"/sources": [
+		"src/routes/sources/+page.ts",
+		"src/routes/+layout.ts"
+	],
+	"/updates": [
+		"src/routes/+layout.ts"
+	]
+}
