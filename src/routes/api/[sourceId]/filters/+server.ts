@@ -1,5 +1,9 @@
 import { sourceFromParams, sourceJson } from '$lib/server/api';
 
-export async function GET({ params }) {
-  return sourceJson(async () => (await sourceFromParams(params).getFilters?.()) ?? []);
+export async function GET({ cookies, params, request }) {
+  return sourceJson(async () => (await sourceFromParams(params).getFilters?.()) ?? [], {
+    cookies,
+    request,
+    sourceId: params.sourceId
+  });
 }

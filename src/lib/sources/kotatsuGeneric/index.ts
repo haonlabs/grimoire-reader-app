@@ -13,9 +13,8 @@ import type {
   SourceHealth,
   SourceMetadata
 } from '$lib/sources/types';
+import { fetchText as sharedFetchText } from '$lib/sources/kotatsuPort/common';
 import { normalizeMangaFormat } from '$lib/utils/mangaFormat';
-
-const REQUEST_TIMEOUT = 12_000;
 
 const DEFAULT_LIST_SELECTORS = [
   '.page-item-detail',
@@ -64,6 +63,28 @@ const DEFAULT_PAGE_IMAGE_SELECTORS = [
   'article img'
 ];
 
+const DEFAULT_DETAIL_TITLE_SELECTORS = [
+  'h1.entry-title',
+  'h1[itemprop="name"]',
+  '.post-title h1',
+  '.post-title h3',
+  '.seriestuheader h1',
+  '.seriestucontent h1',
+  '.infox h1',
+  'h1'
+];
+
+const DEFAULT_DETAIL_COVER_SELECTORS = [
+  '.summary_image',
+  '.thumb',
+  '.bigcover',
+  '.infomanga',
+  '.series-thumb',
+  '.infox',
+  '.seriestucont',
+  '.postbody'
+];
+
 interface ParserProfile {
   listPaths: (page: number) => string[];
   searchPaths: (query: string, page: number) => string[];
@@ -72,6 +93,8 @@ interface ParserProfile {
   imageSelectors: string[];
   chapterSelectors: string[];
   pageSelectors: string[];
+  detailTitleSelectors: string[];
+  detailCoverSelectors: string[];
   detailDescriptionSelectors: string[];
   genreSelectors: string[];
 }
@@ -259,6 +282,8 @@ function makeProfile(profile: Partial<ParserProfile> & Pick<ParserProfile, 'list
     imageSelectors: ['img'],
     chapterSelectors: DEFAULT_CHAPTER_SELECTORS,
     pageSelectors: DEFAULT_PAGE_IMAGE_SELECTORS,
+    detailTitleSelectors: DEFAULT_DETAIL_TITLE_SELECTORS,
+    detailCoverSelectors: DEFAULT_DETAIL_COVER_SELECTORS,
     detailDescriptionSelectors: [
       'div.description-summary div.summary__content',
       'div.summary_content div.post-content_item > h5 + div',
@@ -322,21 +347,69 @@ function profileFor(engine: string): ParserProfile {
   if (engine === 'mangareader') {
     return makeProfile({
       listPaths: (page) => [
+        `/filter?sort=latest-updated&page=${page}`,
+        `/filter?sort=default&page=${page}`,
+        `/manga/?order=update&page=${page}`,
+        `/manga/?order=latest&page=${page}`,
+        `/manga/?page=${page}`
+      ],
+      searchPaths: (query, page) => [
+        `/search?keyword=${encodeURIComponent(query)}&page=${page}`,
+        `/search?keyword=${encodeURIComponent(query)}`,
+        `/page/${page}/?s=${encodeURIComponent(query)}`,
+        `/?s=${encodeURIComponent(query)}&page=${page}`
+      ],
+      listSelectors: ['.manga_list-sbs .manga-poster', '.postbody .listupd .bs .bsx', '.listupd .bs .bsx', '.listupd .bs', '.listupd .utao'],
+      titleSelectors: ['.manga-name', 'div.tt', '.tt', 'h3', 'h4'],
+      imageSelectors: ['img.ts-post-image', 'img'],
+      chapterSelectors: ['#en-chapters > li.chapter-item', '#chapterlist > ul > li', 'li.chapter-item'],
+      pageSelectors: ['.container-reader-chapter > div > img', '.container-reader-chapter img', 'div#readerarea img'],
+      detailTitleSelectors: ['#ani_detail .manga-name', '.manga-name', 'h1'],
+      detailCoverSelectors: ['#ani_detail', '.anis-content', '.manga-detail']
+    });
+  }
+
+  if (engine === 'mangathemesia') {
+    return makeProfile({
+      listPaths: (page) => [
         `/manga/?order=update&page=${page}`,
         `/manga/?order=latest&page=${page}`,
         `/manga/?page=${page}`,
         page > 1 ? `/page/${page}/` : '/'
       ],
       searchPaths: (query, page) => [
-        `/page/${page}/?s=${encodeURIComponent(query)}`,
+        `/manga/?title=${encodeURIComponent(query)}&page=${page}`,
         `/?s=${encodeURIComponent(query)}&page=${page}`,
-        `/search?keyword=${encodeURIComponent(query)}&page=${page}`
+        `/page/${page}/?s=${encodeURIComponent(query)}`
       ],
-      listSelectors: ['.postbody .listupd .bs .bsx', '.listupd .bs .bsx', '.listupd .bs', '.listupd .utao'],
-      titleSelectors: ['div.tt', '.tt', 'h3', 'h4'],
+      listSelectors: ['.utao .uta .imgu', '.listupd .bs .bsx', '.listo .bs .bsx', '.listupd .bs'],
+      titleSelectors: ['.tt', 'h3', 'h4', 'a[title]'],
       imageSelectors: ['img.ts-post-image', 'img'],
-      chapterSelectors: ['#chapterlist > ul > li'],
-      pageSelectors: ['div#readerarea img']
+      chapterSelectors: ['div.bxcl li', 'div.cl li', '#chapterlist li', 'ul li:has(div.chbox):has(div.eph-num)'],
+      pageSelectors: ['div#readerarea img', '#readerarea img'],
+      detailTitleSelectors: ['h1.entry-title', '.ts-breadcrumb li:last-child span', 'h1'],
+      detailCoverSelectors: ['.infomanga', '.thumb', '.infox', '.postbody']
+    });
+  }
+
+  if (engine === 'fmreader') {
+    return makeProfile({
+      listPaths: (page) => [
+        `/directory/?listType=pagination&page=${page}&sort=last_update&sort_type=DESC`,
+        `/series/?page=${page}`,
+        page > 1 ? `/page/${page}/` : '/'
+      ],
+      searchPaths: (query, page) => [
+        `/search?keyword=${encodeURIComponent(query)}&page=${page}`,
+        `/directory/?listType=pagination&page=${page}&alpha=${encodeURIComponent(query)}`
+      ],
+      listSelectors: ['div.media', '.thumb-item-flow'],
+      titleSelectors: ['h3 a', '.series-title a', 'a[title]'],
+      imageSelectors: ['img.thumbnail', 'img'],
+      chapterSelectors: ['div#list-chapters p', 'table.table tr', '.list-chapters > a'],
+      pageSelectors: ['img.chapter-img', '.chapter-content img', '#all img'],
+      detailTitleSelectors: ['h1', '.series-title'],
+      detailCoverSelectors: ['div.row', '.series-cover']
     });
   }
 
@@ -432,7 +505,7 @@ function profileFor(engine: string): ParserProfile {
   });
 }
 
-async function fetchHtml(source: Pick<KotatsuGenericSource, 'name' | 'baseUrl'>, pathOrUrl: string, init?: RequestInit) {
+async function fetchHtml(source: Pick<KotatsuGenericSource, 'id' | 'name' | 'baseUrl'>, pathOrUrl: string, init?: RequestInit) {
   const target = new URL(pathOrUrl, source.baseUrl);
   const requestInit: RequestInit = { ...init };
   if (target.searchParams.has('__kotatsu')) {
@@ -465,11 +538,9 @@ async function fetchHtml(source: Pick<KotatsuGenericSource, 'name' | 'baseUrl'>,
       };
     }
   }
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
   try {
-    const response = await fetch(target, {
+    return await sharedFetchText(target.toString(), {
+      ...requestInit,
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         Referer: `${new URL(source.baseUrl).origin}/`,
@@ -477,26 +548,8 @@ async function fetchHtml(source: Pick<KotatsuGenericSource, 'name' | 'baseUrl'>,
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
         ...requestInit.headers
       },
-      signal: controller.signal,
-      redirect: 'follow',
-      method: requestInit.method,
-      body: requestInit.body
+      sourceId: source.id
     });
-
-    const contentType = response.headers.get('content-type') ?? '';
-    if (!response.ok) {
-      throw Object.assign(new Error(`${source.name} returned HTTP ${response.status}`), {
-        status: response.status,
-        code: 'SOURCE_HTTP_ERROR'
-      });
-    }
-    if (contentType && !contentType.includes('html') && !contentType.includes('text/plain') && !contentType.includes('json')) {
-      throw Object.assign(new Error(`${source.name} did not return an HTML page`), {
-        status: 502,
-        code: 'SOURCE_UNSUPPORTED_RESPONSE'
-      });
-    }
-    return response.text();
   } catch (error) {
     if (error instanceof Error && 'status' in error) throw error;
     const message = error instanceof Error ? error.message : 'network request failed';
@@ -506,8 +559,6 @@ async function fetchHtml(source: Pick<KotatsuGenericSource, 'name' | 'baseUrl'>,
       ),
       { status: 503, code: 'SOURCE_NETWORK_BLOCKED' }
     );
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -548,18 +599,10 @@ export class KotatsuGenericSource implements MangaSource {
     const html = await fetchHtml(this, url);
     const $ = cheerio.load(html);
     const title =
-      clean(
-        $(
-          'h1.entry-title, h1[itemprop="name"], .post-title h1, .seriestuheader h1, .seriestucontent h1, .infox h1, h1'
-        )
-          .first()
-          .text()
-      ) ||
+      clean($(selectorFor(this.profile.detailTitleSelectors)).first().text()) ||
       clean($('meta[property="og:title"]').attr('content')) ||
       'Untitled';
-    const coverRoot =
-      $('.summary_image, .thumb, .bigcover, .infomanga, .series-thumb, .infox, .seriestucont, .postbody').first()[0] ??
-      $('body')[0];
+    const coverRoot = $(selectorFor(this.profile.detailCoverSelectors)).first()[0] ?? $('body')[0];
     const description = clean($(selectorFor(this.profile.detailDescriptionSelectors)).first().text());
     const genres = $(selectorFor(this.profile.genreSelectors))
       .map((_, element) => clean($(element).text()))
@@ -668,7 +711,14 @@ export class KotatsuGenericSource implements MangaSource {
       .get()
       .filter(isLikelyPageImage);
 
-    return unique(pages);
+    if (pages.length) return unique(pages);
+
+    if (this.engine === 'mangareader') {
+      const ajaxPages = await this.fetchMangaReaderAjaxPages($, chapterUrl);
+      if (ajaxPages.length) return ajaxPages;
+    }
+
+    return [];
   }
 
   async getFilters(): Promise<FilterOption[]> {
@@ -788,7 +838,10 @@ export class KotatsuGenericSource implements MangaSource {
     $(selectorFor([...this.profile.chapterSelectors, ...DEFAULT_CHAPTER_SELECTORS])).each((_, element) => {
       const node = $(element);
       const link = node.is('a[href]') ? node : node.find('a[href]').first();
-      const href = absoluteUrl(mangaUrl, link.attr('href'));
+      let href = absoluteUrl(mangaUrl, link.attr('href'));
+      if (this.engine === 'mangareader' && href && node.attr('data-id') && !href.includes('#')) {
+        href += `#${node.attr('data-id')}`;
+      }
       const text = clean(
         node.find('.chapternum, .chapter-title, .entry-title, .title, span.truncate, h5').first().text() ||
           link.text() ||
@@ -920,6 +973,36 @@ export class KotatsuGenericSource implements MangaSource {
     return host ? `https://${host}/uploads` : '';
   }
 
+  private async fetchMangaReaderAjaxPages($: cheerio.CheerioAPI, chapterUrl: string) {
+    const chapterId = new URL(chapterUrl).hash.slice(1) || $('div[data-reading-id]').first().attr('data-reading-id') || '';
+    if (!chapterId) return [];
+
+    try {
+      const raw = await fetchHtml(this, `/ajax/image/list/${chapterId}?mode=vertical`, {
+        headers: {
+          Accept: 'application/json, text/javascript, */*; q=0.01',
+          Referer: chapterUrl,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      const parsed = JSON.parse(raw) as { html?: string };
+      const doc = cheerio.load(parsed.html ?? '');
+      const pages = doc('.container-reader-chapter > div > img, .container-reader-chapter img, img')
+        .map((_, image) => {
+          const img = doc(image);
+          return absoluteUrl(
+            chapterUrl,
+            img.attr('data-lazy-src') ?? img.attr('data-src') ?? img.attr('data-url') ?? img.attr('src') ?? ''
+          );
+        })
+        .get()
+        .filter(isLikelyPageImage);
+      return unique(pages);
+    } catch {
+      return [];
+    }
+  }
+
   private extractScriptPages($: cheerio.CheerioAPI, chapterUrl: string) {
     const pages: string[] = [];
 
@@ -940,6 +1023,16 @@ export class KotatsuGenericSource implements MangaSource {
       if (chapterImage) {
         for (const match of chapterImage[1].matchAll(/["']([^"']+)["']/g)) {
           pages.push(absoluteUrl(chapterUrl, match[1]));
+        }
+      }
+
+      const jsonImages = script.match(/"images"\s*:\s*(\[[\s\S]*?\])/);
+      if (jsonImages) {
+        try {
+          const images = JSON.parse(jsonImages[1]) as unknown[];
+          pages.push(...images.map((src) => absoluteUrl(chapterUrl, String(src))));
+        } catch {
+          // Ignore malformed script data and keep trying the other extractor paths.
         }
       }
 

@@ -11,6 +11,7 @@
   import { enabledSources, settings } from '$lib/stores/settings';
   import { proxiedImageUrl } from '$lib/utils/image';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
+  import { sourceFetch } from '$lib/utils/sourceUnlock';
   import { ChevronRight, Megaphone } from 'lucide-svelte';
   import { onDestroy, onMount } from 'svelte';
 
@@ -78,7 +79,7 @@
     error = '';
     const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
     try {
-      const response = await fetch(`/api/${sourceId}/list?page=${nextPage}&filters=${filters}&_=${Date.now()}`, {
+      const response = await sourceFetch(fetch, sourceId, `/api/${sourceId}/list?page=${nextPage}&filters=${filters}&_=${Date.now()}`, {
         cache: 'no-store',
         signal: controller.signal
       });

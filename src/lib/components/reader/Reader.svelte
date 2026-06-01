@@ -4,6 +4,7 @@
   import type { Chapter, MangaDetail } from '$lib/sources/types';
   import { readChapters, history, readerPositions, type ReaderPosition } from '$lib/stores/history';
   import { settings } from '$lib/stores/settings';
+  import { proxiedImageUrl } from '$lib/utils/image';
   import PageImage from './PageImage.svelte';
   import ReaderOverlay from './ReaderOverlay.svelte';
 
@@ -25,6 +26,7 @@
   let isRestoring = false;
   let restoreTimers: number[] = [];
   let removeScrollListener: (() => void) | undefined;
+  let preloadController: AbortController | undefined;
 
   $: total = pages.length;
   $: settledPages = Object.keys(loadedPages).length + Object.keys(failedPages).length;
@@ -81,6 +83,22 @@
 
   function markFailed(index: number) {
     failedPages = { ...failedPages, [index]: true };
+  }
+
+  function preloadAllPages() {
+    preloadController?.abort();
+    const controller = new AbortController();
+    preloadController = controller;
+
+    const urls = [...new Set(pages.map((src) => proxiedImageUrl(src)))];
+    for (const url of urls) {
+      fetch(url, {
+        cache: 'force-cache',
+        signal: controller.signal
+      }).catch(() => {
+        // The visible image element still owns the real error state.
+      });
+    }
   }
 
   function getCurrentPosition(): ReaderPosition {
@@ -173,6 +191,7 @@
     loadedPages = {};
     failedPages = {};
     mounted = true;
+    preloadAllPages();
     restorePosition(savedPosition);
     window.addEventListener('scroll', scheduleSavePosition, { passive: true });
     window.addEventListener('pagehide', savePosition);
@@ -183,6 +202,7 @@
   });
 
   onDestroy(() => {
+    preloadController?.abort();
     if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
     restoreTimers.forEach((timer) => window.clearTimeout(timer));
     isRestoring = false;

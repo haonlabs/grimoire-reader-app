@@ -67,7 +67,9 @@
     class="{fitClass} rounded-sm transition-opacity duration-200 {loaded ? 'opacity-100' : 'absolute opacity-0'}"
     src={proxiedImageUrl(src)}
     alt={`Page ${index + 1}`}
-    loading={index < 3 ? 'eager' : 'lazy'}
+    loading="eager"
+    fetchpriority={index < 3 ? 'high' : 'auto'}
+    decoding="async"
     on:load={handleLoad}
     on:error={handleError}
   />

@@ -98,6 +98,8 @@ function allowedImageHost(hostname: string) {
     hostname === 'uploads.mangadex.org' ||
     hostname.endsWith('.mangadex.network') ||
     hostname === 'cdn.komikcast.com' ||
+    hostname === 'cdn.asurascans.com' ||
+    hostname.endsWith('.asurascans.com') ||
     hostname.endsWith('.imgkc1.my.id') ||
     hostname === 'assets.shngm.id' ||
     hostname === 'storage.shngm.id' ||
@@ -109,6 +111,18 @@ function allowedImageHost(hostname: string) {
     hostname.endsWith('.komiku.org') ||
     hostname === 'cdn.uqni.net' ||
     hostname.endsWith('.uqni.net') ||
+    hostname === 'i0.wp.com' ||
+    hostname === 'cdn.hentaisubindo.eu.org' ||
+    hostname.endsWith('.hentaisubindo.eu.org') ||
+    hostname === 'cdn.manhwature.com' ||
+    hostname.endsWith('.manhwature.com') ||
+    hostname === 'desu.photos' ||
+    hostname.endsWith('.desu.photos') ||
+    hostname === 'images.manhwaland.email' ||
+    hostname === 'img.manhwaland.email' ||
+    hostname === 'cover.eromanga.cfd' ||
+    hostname === 'reader.eromanga.cfd' ||
+    hostname.endsWith('.eromanga.cfd') ||
     hostname.endsWith('.bato.to') ||
     hostname.endsWith('.wto.to') ||
     hostname.endsWith('.fto.to') ||

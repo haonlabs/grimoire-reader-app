@@ -1,11 +1,12 @@
 import type { PageLoad } from './$types';
 import type { Chapter } from '$lib/sources/types';
+import { sourceFetch } from '$lib/utils/sourceUnlock';
 
 export const load: PageLoad = async ({ fetch, params }) => {
   const [detailResponse, chaptersResponse, pagesResponse] = await Promise.all([
-    fetch(`/api/${params.sourceId}/manga/${params.mangaId}`),
-    fetch(`/api/${params.sourceId}/manga/${params.mangaId}/chapters`),
-    fetch(`/api/${params.sourceId}/chapter/${params.chapterId}/pages`)
+    sourceFetch(fetch, params.sourceId, `/api/${params.sourceId}/manga/${params.mangaId}`),
+    sourceFetch(fetch, params.sourceId, `/api/${params.sourceId}/manga/${params.mangaId}/chapters`),
+    sourceFetch(fetch, params.sourceId, `/api/${params.sourceId}/chapter/${params.chapterId}/pages`)
   ]);
   const chapters = (chaptersResponse.ok ? await chaptersResponse.json() : []) as Chapter[];
   const chapter = chapters.find((entry) => entry.id === params.chapterId) ?? {

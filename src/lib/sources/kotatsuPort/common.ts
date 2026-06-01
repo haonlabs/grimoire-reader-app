@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import type { AnyNode } from 'domhandler';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { Agent, fetch as undiciFetch } from 'undici';
@@ -21,6 +22,7 @@ type SourceFetchInit = RequestInit & {
   body?: BodyInit | null;
   sourceId?: string;
 };
+const requestCookieStorage = new AsyncLocalStorage<string>();
 
 export function encodeId(value: string) {
   return Buffer.from(value, 'utf8').toString('base64url');
@@ -82,6 +84,10 @@ export function numberFrom(text?: string | null) {
   return fallback ? Number(fallback[1]) : 0;
 }
 
+export async function withSourceRequestCookie<T>(cookie: string, handler: () => Promise<T>) {
+  return requestCookieStorage.run(cookie, handler);
+}
+
 function headersToEntries(headers?: HeadersInit) {
   if (!headers) return [];
   if (headers instanceof Headers) return [...headers.entries()];
@@ -94,6 +100,9 @@ function normalizedEnvKey(value?: string | null) {
 }
 
 function sourceCookie(url: string, sourceId?: string) {
+  const requestCookie = requestCookieStorage.getStore()?.trim();
+  if (requestCookie) return requestCookie;
+
   const hostKey = normalizedEnvKey(new URL(url).hostname);
   const sourceKey = normalizedEnvKey(sourceId);
   const candidates = [

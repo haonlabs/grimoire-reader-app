@@ -1,9 +1,10 @@
 import type { PageLoad } from './$types';
+import { sourceFetch } from '$lib/utils/sourceUnlock';
 
 export const load: PageLoad = async ({ fetch, params }) => {
   const [detailResponse, chaptersResponse] = await Promise.all([
-    fetch(`/api/${params.sourceId}/manga/${params.mangaId}`),
-    fetch(`/api/${params.sourceId}/manga/${params.mangaId}/chapters`)
+    sourceFetch(fetch, params.sourceId, `/api/${params.sourceId}/manga/${params.mangaId}`),
+    sourceFetch(fetch, params.sourceId, `/api/${params.sourceId}/manga/${params.mangaId}/chapters`)
   ]);
 
   return {

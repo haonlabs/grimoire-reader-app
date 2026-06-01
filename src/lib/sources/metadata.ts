@@ -3,6 +3,17 @@ import { KOTATSU_SOURCE_CATALOG } from './kotatsuCatalog';
 
 const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
   {
+    id: 'asurascans',
+    name: 'Asura Scans',
+    description: 'English Asura Scans source using the current asurascans.com API and Astro reader pages.',
+    language: 'en',
+    baseUrl: 'https://asurascans.com',
+    contentRating: 'suggestive',
+    isNsfw: false,
+    method: 'Scraping + API',
+    icon: 'AS'
+  },
+  {
     id: 'mangadex',
     name: 'MangaDex',
     description: 'Community manga catalog using the official MangaDex REST API.',
@@ -47,6 +58,17 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     icon: 'BT'
   },
   {
+    id: 'crotpedia',
+    name: 'CrotPedia',
+    description: 'Indonesian explicit source using the CrotPedia ZManga list, detail, and reader pages.',
+    language: 'id',
+    baseUrl: 'https://crotpedia.net',
+    contentRating: 'explicit',
+    isNsfw: true,
+    method: 'Scraping',
+    icon: 'CP'
+  },
+  {
     id: 'doujindesu',
     name: 'DoujinDesu.tv',
     description: 'Indonesian explicit source ported directly from the Kotatsu DoujinDesu parser flow.',
@@ -56,6 +78,17 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     isNsfw: true,
     method: 'Scraping',
     icon: 'DD'
+  },
+  {
+    id: 'doujinpoi',
+    name: 'Doujinpoi',
+    description: 'Indonesian explicit source using Doujinpoi catalog pages and reader JSON endpoints.',
+    language: 'id',
+    baseUrl: 'https://doujinpoi.net',
+    contentRating: 'explicit',
+    isNsfw: true,
+    method: 'Scraping + API',
+    icon: 'DP'
   },
   {
     id: 'komiku',

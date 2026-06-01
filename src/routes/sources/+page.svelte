@@ -1,11 +1,15 @@
 <script lang="ts">
-  import { CheckCircle2, CircleOff, Search, Star, StarOff } from 'lucide-svelte';
+  import { CheckCircle2, CircleOff, ExternalLink, KeyRound, Search, Star, StarOff, X } from 'lucide-svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import Select from '$lib/components/ui/Select.svelte';
   import type { SourceMetadata } from '$lib/sources/types';
   import { enabledSources, settings } from '$lib/stores/settings';
+  import { clearUnlockedSourceCookie, getUnlockedSourceCookie, isSourceUnlocked, saveUnlockedSourceCookie } from '$lib/utils/sourceUnlock';
+  import { onDestroy, onMount } from 'svelte';
+
+  const SOURCE_BATCH_SIZE = 150;
 
   export let data: {
     sources: Array<SourceMetadata & { parserKind?: 'native' | 'generic' | 'catalog'; health?: { status: string; message?: string } }>;
@@ -16,6 +20,13 @@
   let rating = 'all';
   let parser = 'all';
   let tab: 'all' | 'added' | 'available' = 'all';
+  let unlockSource: SourceMetadata | undefined;
+  let unlockCookie = '';
+  let unlockSavedAt = 0;
+  let visibleLimit = SOURCE_BATCH_SIZE;
+  let sentinel: HTMLDivElement;
+  let observer: IntersectionObserver | undefined;
+  let lastFilterKey = '';
 
   $: languages = ['all', ...new Set(data.sources.map((source) => source.language))];
   $: activeSource = $settings.defaultSourceId;
@@ -37,7 +48,13 @@
       (tab === 'available' && !$enabledSources.includes(source.id));
     return matchesText && matchesLanguage && matchesRating && matchesParser && matchesTab;
   });
-  $: visible = matchingSources.slice(0, 150);
+  $: filterKey = `${query.trim().toLowerCase()}:${language}:${rating}:${parser}:${tab}:${$enabledSources.join(',')}`;
+  $: if (filterKey !== lastFilterKey) {
+    lastFilterKey = filterKey;
+    visibleLimit = SOURCE_BATCH_SIZE;
+  }
+  $: visible = matchingSources.slice(0, visibleLimit);
+  $: hasMoreSources = visible.length < matchingSources.length;
 
   function toggleSource(id: string) {
     enabledSources.update((items) => {
@@ -59,6 +76,44 @@
     enabledSources.update((items) => (items.includes(id) ? items : [...items, id]));
     settings.update((value) => ({ ...value, defaultSourceId: id }));
   }
+
+  function openUnlock(source: SourceMetadata) {
+    unlockSource = source;
+    unlockCookie = getUnlockedSourceCookie(source.id);
+    unlockSavedAt = 0;
+  }
+
+  function saveUnlock() {
+    if (!unlockSource) return;
+    saveUnlockedSourceCookie(unlockSource.id, unlockCookie);
+    unlockSavedAt = Date.now();
+  }
+
+  function clearUnlock() {
+    if (!unlockSource) return;
+    clearUnlockedSourceCookie(unlockSource.id);
+    unlockCookie = '';
+    unlockSavedAt = Date.now();
+  }
+
+  function loadMoreSources() {
+    if (!hasMoreSources) return;
+    visibleLimit = Math.min(visibleLimit + SOURCE_BATCH_SIZE, matchingSources.length);
+  }
+
+  onMount(() => {
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) loadMoreSources();
+      },
+      { rootMargin: '420px 0px' }
+    );
+    if (sentinel) observer.observe(sentinel);
+  });
+
+  onDestroy(() => {
+    observer?.disconnect();
+  });
 </script>
 
 <Card class="mb-5 p-4">
@@ -176,6 +231,15 @@
         >
           {#if activeSource === source.id}<Star size={16} class="fill-current" /> Default{:else if source.isImplemented === false}<StarOff size={16} /> Pending{:else}<StarOff size={16} /> Set Default{/if}
         </Button>
+        <Button
+          class="col-span-2"
+          variant={isSourceUnlocked(source.id) ? 'default' : 'outline'}
+          disabled={!source.baseUrl || source.isImplemented === false}
+          on:click={() => openUnlock(source)}
+        >
+          <KeyRound size={16} />
+          {isSourceUnlocked(source.id) ? 'Unlocked' : 'Unlock Source'}
+        </Button>
       </div>
     </Card>
   {:else}
@@ -184,3 +248,72 @@
     </Card>
   {/each}
 </div>
+
+{#if hasMoreSources}
+  <div bind:this={sentinel} class="mt-5 flex justify-center">
+    <Button variant="outline" on:click={loadMoreSources}>Load more sources</Button>
+  </div>
+{:else}
+  <div bind:this={sentinel} class="h-1"></div>
+{/if}
+
+{#if unlockSource}
+  <div class="fixed inset-0 z-50 grid place-items-end bg-black/60 p-3 sm:place-items-center" role="presentation" on:click={() => (unlockSource = undefined)}>
+    <div
+      class="w-full max-w-xl rounded-lg border border-white/10 bg-[#101012] p-4 shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Unlock source"
+      tabindex="-1"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-violet-300">Unlock Source</p>
+          <h2 class="mt-1 text-xl font-bold text-white">{unlockSource.name}</h2>
+          <p class="mt-1 text-sm text-white/55">Simpan cookie browser untuk source ini agar request backend bisa memakai sesi yang sama.</p>
+        </div>
+        <button class="focus-ring rounded-md bg-white/10 p-2 text-white" type="button" title="Close" on:click={() => (unlockSource = undefined)}>
+          <X size={18} />
+        </button>
+      </div>
+
+      <div class="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-white/65">
+        <a
+          class="focus-ring inline-flex w-fit items-center gap-2 rounded-md bg-violet-600 px-3 py-2 font-semibold text-white"
+          href={unlockSource.baseUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <ExternalLink size={16} />
+          Open Source
+        </a>
+        <p>Buka source sampai normal, lalu paste cookie domain source di bawah. Formatnya seperti <span class="font-mono text-white">cf_clearance=...; __cf_bm=...</span>.</p>
+      </div>
+
+      <label class="mt-4 grid gap-2 text-sm font-medium text-white/70">
+        Cookie
+        <textarea
+          class="focus-ring min-h-28 rounded-lg border border-white/10 bg-white/10 p-3 font-mono text-xs text-white placeholder:text-white/35"
+          bind:value={unlockCookie}
+          placeholder="cf_clearance=...; __cf_bm=..."
+        ></textarea>
+      </label>
+
+      {#if unlockSavedAt}
+        <p class="mt-3 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 text-sm text-emerald-200">Unlock source tersimpan.</p>
+      {/if}
+
+      <div class="mt-4 flex flex-wrap justify-end gap-2">
+        <Button variant="outline" on:click={clearUnlock}>
+          Clear
+        </Button>
+        <Button on:click={saveUnlock}>
+          <KeyRound size={16} />
+          Save Unlock
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}

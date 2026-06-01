@@ -1,4 +1,7 @@
+import { AsuraScansSource } from './asurascans';
 import { BatoToSource } from './batoto';
+import { CrotpediaSource } from './crotpedia';
+import { DoujinpoiSource } from './doujinpoi';
 import { DoujinDesuSource } from './doujindesu';
 import { KomikcastSource } from './komikcast';
 import { KomikTapSource } from './komiktap';
@@ -13,10 +16,13 @@ import { ShinigamiSource } from './shinigami';
 import type { MangaSource } from './types';
 
 export const SOURCE_REGISTRY: Record<string, MangaSource> = {
+  asurascans: new AsuraScansSource(),
   mangadex: new MangaDexSource(),
   mangafire: new MangaFireSource(),
   mangaplus: new MangaPlusSource(),
   batoto: new BatoToSource(),
+  crotpedia: new CrotpediaSource(),
+  doujinpoi: new DoujinpoiSource(),
   doujindesu: new DoujinDesuSource('doujindesu'),
   kotatsu_id_doujindesuparser: new DoujinDesuSource('kotatsu_id_doujindesuparser'),
   komiku: new KomikuSource(),
