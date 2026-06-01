@@ -22,9 +22,17 @@
     "name": "MangaGrid",
     "imports": [
       "_renderer.js",
+      "_mangaFormat.js",
       "_image.js",
       "_book-open.js",
-      "_Icon.js"
+      "_star.js"
+    ]
+  },
+  "_SkeletonProgress.js": {
+    "file": "chunks/SkeletonProgress.js",
+    "name": "SkeletonProgress",
+    "imports": [
+      "_renderer.js"
     ]
   },
   "_api.js": {
@@ -53,6 +61,14 @@
   "_circle-check.js": {
     "file": "chunks/circle-check.js",
     "name": "circle-check",
+    "imports": [
+      "_renderer.js",
+      "_Icon.js"
+    ]
+  },
+  "_compass.js": {
+    "file": "chunks/compass.js",
+    "name": "compass",
     "imports": [
       "_renderer.js",
       "_Icon.js"
@@ -96,7 +112,17 @@
     "file": "chunks/library.js",
     "name": "library",
     "imports": [
+      "_renderer.js",
+      "_Icon.js",
       "_localStorage.js"
+    ]
+  },
+  "_list.js": {
+    "file": "chunks/list.js",
+    "name": "list",
+    "imports": [
+      "_renderer.js",
+      "_Icon.js"
     ]
   },
   "_localStorage.js": {
@@ -106,9 +132,24 @@
       "_index.js"
     ]
   },
+  "_mangaFormat.js": {
+    "file": "chunks/mangaFormat.js",
+    "name": "mangaFormat"
+  },
+  "_play.js": {
+    "file": "chunks/play.js",
+    "name": "play",
+    "imports": [
+      "_renderer.js",
+      "_Icon.js"
+    ]
+  },
   "_registry.js": {
     "file": "chunks/registry.js",
-    "name": "registry"
+    "name": "registry",
+    "imports": [
+      "_mangaFormat.js"
+    ]
   },
   "_render-context.js": {
     "file": "chunks/render-context.js",
@@ -165,6 +206,22 @@
     "imports": [
       "_utils.js",
       "_render-context.js"
+    ]
+  },
+  "_sliders-horizontal.js": {
+    "file": "chunks/sliders-horizontal.js",
+    "name": "sliders-horizontal",
+    "imports": [
+      "_renderer.js",
+      "_Icon.js"
+    ]
+  },
+  "_star.js": {
+    "file": "chunks/star.js",
+    "name": "star",
+    "imports": [
+      "_renderer.js",
+      "_Icon.js"
     ]
   },
   "_state.svelte.js": {
@@ -253,12 +310,14 @@
       "_state.svelte.js",
       "_search.js",
       "_settings.js",
-      "_Icon.js",
+      "_settings2.js",
+      "_compass.js",
       "_bookmark.js",
-      "_settings2.js"
+      "_sliders-horizontal.js",
+      "_Icon.js"
     ],
     "css": [
-      "_app/immutable/assets/_layout.DfAkIZfC.css"
+      "_app/immutable/assets/_layout.CTvaFsIC.css"
     ]
   },
   "src/routes/+layout.ts": {
@@ -363,8 +422,11 @@
       "_renderer.js",
       "_MangaGrid.js",
       "_Icon.js",
+      "_list.js",
       "_rotate-ccw.js",
-      "_settings.js"
+      "_settings.js",
+      "_image.js",
+      "_mangaFormat.js"
     ]
   },
   "src/routes/history/+page.svelte": {
@@ -389,8 +451,7 @@
       "_MangaGrid.js",
       "_library.js",
       "_settings.js",
-      "_trash-2.js",
-      "_Icon.js"
+      "_trash-2.js"
     ]
   },
   "src/routes/manga/[sourceId]/[mangaId]/+page.svelte": {
@@ -400,13 +461,16 @@
     "isEntry": true,
     "imports": [
       "_renderer.js",
-      "_circle-check.js",
-      "_Icon.js",
       "_image.js",
+      "_circle-check.js",
+      "_play.js",
+      "_mangaFormat.js",
       "_library.js",
       "_history.js",
-      "_bookmark.js",
       "_book-open.js",
+      "_Icon.js",
+      "_bookmark.js",
+      "_star.js",
       "_rotate-ccw.js"
     ]
   },
@@ -426,14 +490,37 @@
       "_history.js",
       "_settings.js",
       "_image.js",
+      "_SkeletonProgress.js",
       "_Icon.js",
-      "_settings2.js"
+      "_settings2.js",
+      "_list.js",
+      "_play.js"
     ]
   },
   "src/routes/manga/[sourceId]/[mangaId]/[chapterId]/+page.ts": {
     "file": "entries/pages/manga/_sourceId_/_mangaId_/_chapterId_/_page.ts.js",
     "name": "entries/pages/manga/_sourceId_/_mangaId_/_chapterId_/_page.ts",
     "src": "src/routes/manga/[sourceId]/[mangaId]/[chapterId]/+page.ts",
+    "isEntry": true
+  },
+  "src/routes/profile/+page.svelte": {
+    "file": "entries/pages/profile/_page.svelte.js",
+    "name": "entries/pages/profile/_page.svelte",
+    "src": "src/routes/profile/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_renderer.js",
+      "_settings.js",
+      "_compass.js",
+      "_settings2.js",
+      "_bookmark.js",
+      "_sliders-horizontal.js"
+    ]
+  },
+  "src/routes/profile/+page.ts": {
+    "file": "entries/pages/profile/_page.ts.js",
+    "name": "entries/pages/profile/_page.ts",
+    "src": "src/routes/profile/+page.ts",
     "isEntry": true
   },
   "src/routes/search/+page.svelte": {
@@ -445,7 +532,9 @@
       "_renderer.js",
       "_stores.js",
       "_MangaGrid.js",
-      "_settings.js"
+      "_SkeletonProgress.js",
+      "_settings.js",
+      "_sliders-horizontal.js"
     ]
   },
   "src/routes/search/+page.ts": {
@@ -476,7 +565,8 @@
       "_settings.js",
       "_search.js",
       "_circle-check.js",
-      "_Icon.js"
+      "_Icon.js",
+      "_star.js"
     ]
   },
   "src/routes/sources/+page.ts": {

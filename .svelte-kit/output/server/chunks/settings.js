@@ -1,28 +1,20 @@
 import { l as localStore } from "./localStorage.js";
 const defaultSettings = {
   theme: "system",
-  uiLanguage: "en",
-  defaultSourceId: "mangadex",
+  uiLanguage: "id",
+  defaultSourceId: "shinigami",
   defaultContentRating: "suggestive",
   reader: {
-    mode: "rtl",
+    mode: "vertical",
     fit: "width",
     background: "black",
     preloadPages: 3,
-    showPageNumber: true,
+    showPageNumber: false,
     incognito: false
   }
 };
 const settings = localStore("manga_settings", defaultSettings);
-const defaultEnabledSources = [
-  "mangadex",
-  "mangafire",
-  "mangaplus",
-  "batoto",
-  "komiku",
-  "shinigami",
-  "komikcast"
-];
+const defaultEnabledSources = ["shinigami"];
 const enabledSources = localStore("manga_sources_enabled", defaultEnabledSources);
 export {
   enabledSources as e,

@@ -8,6 +8,7 @@ import type {
   MangaSource,
   MangaStatus
 } from '$lib/sources/types';
+import { normalizeMangaFormat } from '$lib/utils/mangaFormat';
 
 const API_BASE = 'https://be.komikcast.cc';
 const SITE_BASE = 'https://v2.komikcast.fit';
@@ -123,6 +124,7 @@ function mangaFromEntity(entity: KomikcastSeriesEntity): Manga {
     coverUrl: compactImageUrl(data.coverImage),
     author: data.author,
     description: data.synopsis,
+    format: normalizeMangaFormat(data.format),
     status: statusFrom(data.status),
     genres: data.genres?.map((genre) => genre.data?.name).filter(Boolean).slice(0, 8) as string[],
     rating: data.rating,

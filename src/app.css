@@ -4,14 +4,14 @@
 
 :root {
   color-scheme: light;
-  background: #f8f7f2;
+  background: #050506;
   color: #141318;
 }
 
 :root.dark {
   color-scheme: dark;
-  background: #141318;
-  color: #f7f2e8;
+  background: #050506;
+  color: #f5f5f5;
 }
 
 body {
@@ -20,9 +20,7 @@ body {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  background:
-    linear-gradient(180deg, rgba(216, 169, 72, 0.08), transparent 38rem),
-    var(--page-bg, #f8f7f2);
+  background: var(--page-bg, #050506);
 }
 
 button,
@@ -33,9 +31,45 @@ textarea {
 }
 
 .dark body {
-  --page-bg: #141318;
+  --page-bg: #050506;
 }
 
 .focus-ring {
   @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2 focus-visible:ring-offset-paper dark:focus-visible:ring-offset-ink;
+}
+
+@keyframes shimmer-pan {
+  0% {
+    background-position: 160% 0;
+  }
+
+  100% {
+    background-position: -160% 0;
+  }
+}
+
+.shimmer {
+  background-image: linear-gradient(
+    110deg,
+    rgba(20, 19, 24, 0.07) 0%,
+    rgba(255, 255, 255, 0.72) 22%,
+    rgba(20, 19, 24, 0.07) 44%
+  );
+  background-size: 220% 100%;
+  animation: shimmer-pan 1.35s ease-in-out infinite;
+}
+
+.dark .shimmer,
+.reader-dark .shimmer {
+  background-image: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.18) 22%,
+    rgba(255, 255, 255, 0.08) 44%
+  );
+}
+
+.reader-clean {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }

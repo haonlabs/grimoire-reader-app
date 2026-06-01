@@ -1,4 +1,4 @@
-import { l as lifecycle_outside_component, B as BROWSER, d as dynamic_element_invalid_tag, i as invalid_csp, a as await_invalid, g as get_render_context, b as invalid_id_prefix } from "./render-context.js";
+import { l as lifecycle_outside_component, b as browser, d as dynamic_element_invalid_tag, i as invalid_csp, a as await_invalid, g as get_render_context, c as invalid_id_prefix } from "./render-context.js";
 import { clsx as clsx$1 } from "clsx";
 import * as devalue from "devalue";
 var ssr_context = null;
@@ -848,7 +848,7 @@ class Batch {
   }
   flush() {
     try {
-      if (BROWSER) ;
+      if (browser) ;
       is_processing = true;
       current_batch = this;
       this.#process();
@@ -2192,7 +2192,7 @@ function update_effect(effect) {
     effect.teardown = typeof teardown === "function" ? teardown : null;
     effect.wv = write_version;
     var dep;
-    if (BROWSER && tracing_mode_flag && (effect.f & DIRTY) !== 0 && effect.deps !== null) ;
+    if (browser && tracing_mode_flag && (effect.f & DIRTY) !== 0 && effect.deps !== null) ;
   } finally {
     is_updating_effect = was_updating_effect;
     active_effect = previous_effect;
@@ -3384,12 +3384,13 @@ export {
   slot as ad,
   source as ae,
   spread_props as af,
-  store_get as ag,
-  stringify as ah,
-  svelte_boundary_reset_noop as ai,
-  svelte_boundary_reset_onerror as aj,
-  unsubscribe_stores as ak,
-  untrack as al,
+  ssr_context as ag,
+  store_get as ah,
+  stringify as ai,
+  svelte_boundary_reset_noop as aj,
+  svelte_boundary_reset_onerror as ak,
+  unsubscribe_stores as al,
+  untrack as am,
   EFFECT_TRANSPARENT as b,
   HYDRATION_ERROR as c,
   HYDRATION_START as d,

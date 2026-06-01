@@ -32,20 +32,20 @@
   }
 </script>
 
-<section class="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+<section class="mb-6 flex flex-col gap-4 rounded-lg border border-white/10 bg-[#111116] p-4 shadow-soft md:flex-row md:items-end md:justify-between">
   <div>
     <p class="text-sm font-medium text-ember">Library</p>
-    <h1 class="mt-1 text-3xl font-bold">Saved manga</h1>
+    <h1 class="mt-1 text-3xl font-bold text-white">Saved manga</h1>
   </div>
   <div class="flex flex-wrap gap-2">
-    <select class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10" bind:value={sort}>
-      <option value="added">Recently added</option>
-      <option value="read">Last read</option>
-      <option value="title">Title A-Z</option>
+    <select class="focus-ring rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" bind:value={sort}>
+      <option class="bg-ink" value="added">Recently added</option>
+      <option class="bg-ink" value="read">Last read</option>
+      <option class="bg-ink" value="title">Title A-Z</option>
     </select>
-    <select class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10" bind:value={view}>
-      <option value="grid">Grid</option>
-      <option value="list">List</option>
+    <select class="focus-ring rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" bind:value={view}>
+      <option class="bg-ink" value="grid">Grid</option>
+      <option class="bg-ink" value="list">List</option>
     </select>
     <button class="focus-ring rounded-lg border border-ember/30 px-3 py-2 text-sm text-ember" type="button" on:click={removeSelected}>
       <Trash2 size={16} />
@@ -56,7 +56,7 @@
 <div class="mb-5 flex gap-2 overflow-x-auto pb-1">
   {#each $categories as category}
     <button
-      class="focus-ring whitespace-nowrap rounded-lg px-3 py-2 text-sm {activeCategory === category.id ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'border border-ink/10 bg-white text-ink/70 dark:border-white/10 dark:bg-white/10 dark:text-white/70'}"
+      class="focus-ring whitespace-nowrap rounded-lg px-3 py-2 text-sm {activeCategory === category.id ? 'bg-ember text-white' : 'border border-white/10 bg-white/10 text-white/70'}"
       type="button"
       on:click={() => (activeCategory = category.id)}
     >
@@ -66,8 +66,8 @@
 </div>
 
 <form class="mb-6 flex max-w-md gap-2" on:submit|preventDefault={addCategory}>
-  <input class="focus-ring min-h-10 flex-1 rounded-lg border border-ink/10 bg-white px-3 text-sm dark:border-white/10 dark:bg-white/10" bind:value={newCategory} placeholder="New category" />
-  <button class="focus-ring rounded-lg bg-ink px-3 text-white dark:bg-white dark:text-ink" type="submit" title="Create category">
+  <input class="focus-ring min-h-10 flex-1 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white placeholder:text-white/40" bind:value={newCategory} placeholder="New category" />
+  <button class="focus-ring rounded-lg bg-ember px-3 text-white" type="submit" title="Create category">
     <Plus size={18} />
   </button>
 </form>
@@ -75,7 +75,7 @@
 {#if manga.length}
   <MangaGrid items={manga} {view} />
 {:else}
-  <div class="rounded-lg border border-ink/10 bg-white p-6 text-sm text-ink/55 dark:border-white/10 dark:bg-white/5 dark:text-white/55">
+  <div class="rounded-lg border border-white/10 bg-[#111116] p-6 text-sm text-white/55">
     Your library is empty. Add manga from a detail page and it will appear here.
   </div>
 {/if}

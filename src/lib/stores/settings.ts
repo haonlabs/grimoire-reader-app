@@ -24,31 +24,33 @@ export interface UserSettings {
 
 export const defaultSettings: UserSettings = {
   theme: 'system',
-  uiLanguage: 'en',
-  defaultSourceId: 'mangadex',
+  uiLanguage: 'id',
+  defaultSourceId: 'shinigami',
   defaultContentRating: 'suggestive',
   reader: {
-    mode: 'rtl',
+    mode: 'vertical',
     fit: 'width',
     background: 'black',
     preloadPages: 3,
-    showPageNumber: true,
+    showPageNumber: false,
     incognito: false
   }
 };
 
 export const settings = localStore<UserSettings>('manga_settings', defaultSettings);
-export const defaultEnabledSources = [
-  'mangadex',
-  'mangafire',
-  'mangaplus',
-  'batoto',
-  'komiku',
-  'shinigami',
-  'komikcast'
-];
+export const defaultEnabledSources = ['shinigami'];
 export const enabledSources = localStore<string[]>('manga_sources_enabled', defaultEnabledSources);
 
 if (browser) {
-  enabledSources.update((items) => [...new Set([...items, ...defaultEnabledSources])]);
+  enabledSources.update((items) => [...new Set(items.length ? items : defaultEnabledSources)]);
+  settings.update((value) => ({
+    ...value,
+    uiLanguage: value.uiLanguage === 'en' ? 'id' : value.uiLanguage,
+    defaultSourceId: value.defaultSourceId === 'mangadex' ? 'shinigami' : value.defaultSourceId,
+    reader: {
+      ...value.reader,
+      mode: 'vertical',
+      showPageNumber: false
+    }
+  }));
 }

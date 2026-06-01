@@ -1,4 +1,5 @@
 export type ContentRating = 'safe' | 'suggestive' | 'explicit';
+export type MangaFormat = 'Manga' | 'Manhwa' | 'Manhua';
 export type MangaStatus = 'ongoing' | 'completed' | 'hiatus' | 'cancelled';
 export type SortOption = 'popular' | 'newest' | 'updated' | 'rating';
 
@@ -22,6 +23,7 @@ export interface Manga {
   author?: string;
   artist?: string;
   description?: string;
+  format?: MangaFormat;
   status: MangaStatus;
   genres: string[];
   rating?: number;
@@ -40,6 +42,7 @@ export interface Chapter {
   sourceId: string;
   number: number;
   title?: string;
+  thumbnailUrl?: string;
   language: string;
   uploadedAt: string;
   scanlator?: string;
@@ -87,4 +90,5 @@ export interface SourceMetadata {
   isNsfw: boolean;
   method: 'Official API' | 'Unofficial API' | 'Scraping' | 'Scraping + API';
   icon: string;
+  isImplemented?: boolean;
 }

@@ -32,15 +32,6 @@
   <section class="rounded-lg border border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-white/5">
     <h2 class="text-lg font-semibold">Reader</h2>
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
-      <label class="grid gap-1 text-sm">Mode
-        <select class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10" bind:value={$settings.reader.mode}>
-          <option value="rtl">Horizontal RTL</option>
-          <option value="ltr">Horizontal LTR</option>
-          <option value="vertical">Vertical Scroll</option>
-          <option value="single">Single Page</option>
-          <option value="double">Double Page</option>
-        </select>
-      </label>
       <label class="grid gap-1 text-sm">Fit
         <select class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10" bind:value={$settings.reader.fit}>
           <option value="width">Fit Width</option>
@@ -58,10 +49,6 @@
       </label>
       <label class="grid gap-1 text-sm">Preload pages
         <input class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10" type="number" min="1" max="10" bind:value={$settings.reader.preloadPages} />
-      </label>
-      <label class="flex items-center gap-2 text-sm">
-        <input type="checkbox" bind:checked={$settings.reader.showPageNumber} />
-        Show page number overlay
       </label>
       <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" bind:checked={$settings.reader.incognito} />

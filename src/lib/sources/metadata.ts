@@ -1,6 +1,7 @@
 import type { SourceMetadata } from './types';
+import { KOTATSU_SOURCE_CATALOG } from './kotatsuCatalog';
 
-export const SOURCE_METADATA: SourceMetadata[] = [
+const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
   {
     id: 'mangadex',
     name: 'MangaDex',
@@ -61,7 +62,7 @@ export const SOURCE_METADATA: SourceMetadata[] = [
     name: 'Shinigami ID',
     description: 'Indonesian manga, manhwa, and manhua source using the Shinigami API.',
     language: 'id',
-    baseUrl: 'https://shinigami.cv',
+    baseUrl: 'https://g.shinigami.asia',
     contentRating: 'suggestive',
     isNsfw: false,
     method: 'Unofficial API',
@@ -79,3 +80,5 @@ export const SOURCE_METADATA: SourceMetadata[] = [
     icon: 'KC'
   }
 ];
+
+export const SOURCE_METADATA: SourceMetadata[] = [...IMPLEMENTED_SOURCE_METADATA, ...KOTATSU_SOURCE_CATALOG];

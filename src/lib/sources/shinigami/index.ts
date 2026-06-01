@@ -8,10 +8,11 @@ import type {
   MangaSource,
   MangaStatus
 } from '$lib/sources/types';
+import { normalizeMangaFormat } from '$lib/utils/mangaFormat';
 
 const API_BASE = 'https://api.shngm.io/v1';
 const CDN_BASE = 'https://assets.shngm.id';
-const SITE_BASE = 'https://shinigami.cv';
+const SITE_BASE = 'https://g.shinigami.asia';
 const PAGE_LIMIT = 24;
 const REQUEST_TIMEOUT = 15_000;
 
@@ -46,6 +47,7 @@ interface ShinigamiChapterEntity {
   manga_id: string;
   chapter_title?: string;
   chapter_number?: number;
+  thumbnail_image_url?: string;
   release_date?: string;
 }
 
@@ -85,11 +87,13 @@ function sortFrom(filters?: FilterInput[]) {
   const sort = filters?.find((entry) => entry.id === 'sort')?.value;
   if (sort === 'rating') return 'rating';
   if (sort === 'newest' || sort === 'updated') return 'latest';
-  return 'popularity';
+  if (sort === 'popular') return 'popularity';
+  return 'latest';
 }
 
 function mangaFromEntity(entity: ShinigamiMangaEntity): Manga {
   const authors = entity.taxonomy?.Author?.map((item) => item.name).filter(Boolean) ?? [];
+  const format = entity.taxonomy?.Format?.map((item) => normalizeMangaFormat(item.name)).find(Boolean);
   return {
     id: entity.manga_id,
     sourceId: 'shinigami',
@@ -98,6 +102,7 @@ function mangaFromEntity(entity: ShinigamiMangaEntity): Manga {
     author: authors.join(', ') || undefined,
     artist: entity.taxonomy?.Artist?.map((item) => item.name).filter(Boolean).join(', ') || undefined,
     description: entity.description,
+    format,
     status: statusFrom(entity.status),
     genres: entity.taxonomy?.Genre?.map((genre) => genre.name).filter(Boolean).slice(0, 8) ?? [],
     rating: entity.user_rate,
@@ -112,6 +117,7 @@ function chapterFromEntity(entity: ShinigamiChapterEntity): Chapter {
     sourceId: 'shinigami',
     number: entity.chapter_number ?? 0,
     title: entity.chapter_title?.trim() || undefined,
+    thumbnailUrl: entity.thumbnail_image_url,
     language: 'id',
     uploadedAt: entity.release_date ?? new Date().toISOString(),
     url: `${SITE_BASE}/chapter/${entity.chapter_id}`

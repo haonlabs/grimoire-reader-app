@@ -1,10 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Loader2 } from 'lucide-svelte';
+  import { browser } from '$app/environment';
+  import { ChevronRight, Megaphone } from 'lucide-svelte';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
+  import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
   import FilterPanel from '$lib/components/ui/FilterPanel.svelte';
-  import { settings } from '$lib/stores/settings';
+  import { enabledSources, settings } from '$lib/stores/settings';
   import type { Manga, MangaListResult, SourceMetadata } from '$lib/sources/types';
+  import { proxiedImageUrl } from '$lib/utils/image';
+  import { mangaFormatLabel } from '$lib/utils/mangaFormat';
 
   export let data: { sources?: SourceMetadata[] };
 
@@ -15,21 +19,45 @@
   let error = '';
   let hasNextPage = false;
   let view: 'grid' | 'list' = 'grid';
-  let sort = 'popular';
+  let sort = 'updated';
   let status = 'all';
   let lastKey = '';
+  let mounted = false;
+  let formatTab = 'Manhwa';
+  let updateTab = 'Project';
 
-  $: sourceId = $settings.defaultSourceId;
-  $: sources = data.sources ?? [];
+  $: sources = (data.sources ?? []).filter((source) => source.isImplemented !== false && $enabledSources.includes(source.id));
+  $: sourceId = sources.some((source) => source.id === $settings.defaultSourceId)
+    ? $settings.defaultSourceId
+    : (sources[0]?.id ?? 'shinigami');
   $: sourceName = sources.find((source) => source.id === sourceId)?.name ?? sourceId;
   $: visibleItems = status === 'all' ? items : items.filter((item) => item.status === status);
+  $: hero = featured[0] ?? visibleItems[0];
+  $: recommendedMatches = visibleItems.filter((item) =>
+    mangaFormatLabel(item).toLowerCase() === formatTab.toLowerCase()
+  );
+  $: recommended = (recommendedMatches.length ? recommendedMatches : visibleItems).slice(0, 6);
+  $: updateItems = (updateTab === 'Mirror' ? [...visibleItems].reverse() : visibleItems).slice(0, 24);
   $: key = `${sourceId}:${sort}`;
-  $: if (key !== lastKey) {
+  $: if (browser && sources.length && sourceId !== $settings.defaultSourceId) {
+    settings.update((value) => ({ ...value, defaultSourceId: sourceId }));
+  }
+  $: if (browser && mounted && key !== lastKey) {
     lastKey = key;
-    loadList(1, true);
+    loadList(1);
   }
 
-  async function loadList(nextPage = page, replace = false) {
+  function uniqueManga(nextItems: Manga[]) {
+    const seen = new Set<string>();
+    return nextItems.filter((item) => {
+      const key = `${item.sourceId}:${item.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  async function loadList(nextPage = page) {
     loading = true;
     error = '';
     const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
@@ -40,22 +68,24 @@
         throw new Error(body.error ?? 'Source failed');
       }
       const result = (await response.json()) as MangaListResult;
-      items = replace ? result.items : [...items, ...result.items];
+      items = uniqueManga(result.items);
       page = result.page;
       hasNextPage = result.hasNextPage;
-      if (replace) featured = result.items.slice(0, 6);
+      featured = result.items.slice(0, 6);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load manga';
-      if (replace) {
-        items = [];
-        featured = [];
-      }
+      items = [];
+      featured = [];
     } finally {
       loading = false;
     }
   }
 
-  onMount(() => loadList(1, true));
+  onMount(() => {
+    mounted = true;
+    lastKey = key;
+    loadList(1);
+  });
 
   function setSource(event: Event) {
     const target = event.target as HTMLSelectElement;
@@ -63,37 +93,93 @@
   }
 </script>
 
-<section class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-  <div>
-    <p class="text-sm font-medium text-ember">Explore</p>
-    <h1 class="mt-1 text-3xl font-bold">Browse manga</h1>
-    <p class="mt-1 text-sm text-ink/55 dark:text-white/55">Current source: {sourceName}</p>
-  </div>
-  <div class="flex flex-wrap items-end gap-3">
-    <label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-ink/55 dark:text-white/55">
-      Source
-      <select
-        class="focus-ring rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm normal-case text-ink dark:border-white/15 dark:bg-white/10 dark:text-white"
-        value={sourceId}
-        on:change={setSource}
-      >
-        {#each sources as source}
-          <option value={source.id}>{source.name}</option>
-        {/each}
-      </select>
-    </label>
-    <FilterPanel bind:view bind:sort bind:status on:click={() => loadList(1, true)} />
-  </div>
+<section class="mb-5 grid gap-3 lg:grid-cols-[1fr_20rem]">
+  <a
+    class="group relative min-h-[18rem] overflow-hidden rounded-lg border border-white/10 bg-[#141416]"
+    href={hero ? `/manga/${hero.sourceId}/${hero.id}` : '/search'}
+  >
+    {#if hero?.coverUrl}
+      <img
+        class="absolute inset-0 h-full w-full object-cover opacity-55 transition duration-500 group-hover:scale-[1.03]"
+        src={proxiedImageUrl(hero.coverUrl)}
+        alt={hero.title}
+      />
+    {:else}
+      <div class="absolute inset-0 shimmer bg-white/10"></div>
+    {/if}
+    <div class="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/15"></div>
+    <div class="relative flex min-h-[18rem] max-w-2xl flex-col justify-end p-5 sm:p-7">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-300">{sourceName}</p>
+      <h1 class="line-clamp-2 text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+        {hero?.title ?? 'GRIMOIRE ID'}
+      </h1>
+      <p class="mt-3 line-clamp-3 text-sm leading-6 text-white/70">
+        {hero?.description ?? 'Baca manhwa, manga, dan manhua dengan tampilan clean seperti Shinigami.'}
+      </p>
+      <div class="mt-5 inline-flex w-fit items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white">
+        Baca
+        <ChevronRight size={17} />
+      </div>
+    </div>
+  </a>
+
+  <section class="rounded-lg border border-white/10 bg-[#141416] p-4">
+    <div class="mb-3 flex items-center gap-2">
+      <Megaphone size={18} class="text-violet-300" />
+      <h2 class="text-base font-semibold text-white">Pengumuman</h2>
+    </div>
+    <div class="space-y-3 text-sm leading-6 text-white/65">
+      <p>Source aktif: {sourceName}</p>
+      <p>Reading mode dibuat scrolling clean, menu muncul saat area baca di-tap.</p>
+      <p>Library, history, dan setting tetap tersimpan lokal di browser ini.</p>
+    </div>
+  </section>
 </section>
 
-{#if featured.length}
+<section class="mb-5 flex flex-col gap-3 rounded-lg border border-white/10 bg-[#101012] p-4 lg:flex-row lg:items-end lg:justify-between">
+  <label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">
+    Source
+    <select
+      class="focus-ring rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm normal-case text-white"
+      value={sourceId}
+      on:change={setSource}
+    >
+      {#each sources as source}
+        <option class="bg-ink" value={source.id}>{source.name}</option>
+      {/each}
+    </select>
+  </label>
+  <FilterPanel bind:view bind:sort bind:status on:click={() => loadList(1)} />
+</section>
+
+{#if recommended.length}
   <section class="mb-8">
-    <h2 class="mb-3 text-lg font-semibold">Featured from {$settings.defaultSourceId}</h2>
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-xl font-bold text-white">Rekomendasi</h2>
+      <div class="flex rounded-lg border border-white/10 bg-[#141416] p-1">
+        {#each ['Manhwa', 'Manga', 'Manhua'] as tab}
+          <button
+            class="focus-ring rounded-md px-3 py-1.5 text-sm font-medium {formatTab === tab ? 'bg-violet-600 text-white' : 'text-white/60'}"
+            type="button"
+            on:click={() => (formatTab = tab)}
+          >
+            {tab}
+          </button>
+        {/each}
+      </div>
+    </div>
     <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      {#each featured as manga (manga.id)}
-        <a class="group relative aspect-[3/4] overflow-hidden rounded-lg bg-ink text-white" href={`/manga/${manga.sourceId}/${manga.id}`}>
-          <img class="h-full w-full object-cover opacity-80 transition group-hover:scale-105" src={`/api/image-proxy?url=${encodeURIComponent(manga.coverUrl)}`} alt={manga.title} />
-          <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-3 text-sm font-semibold">{manga.title}</span>
+      {#each recommended as manga (manga.id)}
+        <a class="group relative aspect-[2/3] overflow-hidden rounded-lg bg-[#141416] text-white" href={`/manga/${manga.sourceId}/${manga.id}`}>
+          {#if manga.coverUrl}
+            <img class="h-full w-full object-cover transition group-hover:scale-105" src={proxiedImageUrl(manga.coverUrl)} alt={manga.title} />
+          {:else}
+            <div class="h-full w-full shimmer bg-white/10"></div>
+          {/if}
+          <span class="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+            {mangaFormatLabel(manga)}
+          </span>
+          <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3 text-sm font-semibold">{manga.title}</span>
         </a>
       {/each}
     </div>
@@ -101,28 +187,70 @@
 {/if}
 
 {#if error}
-  <div class="rounded-lg border border-ember/30 bg-ember/10 p-4 text-sm text-ember">{error}</div>
+  <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>
 {:else if loading && !items.length}
-  <div class="grid place-items-center py-16 text-ink/50 dark:text-white/50">
-    <Loader2 class="animate-spin" size={28} />
-  </div>
+  <section class="mb-8" aria-label="Loading featured manga">
+    <div class="mb-3 h-6 w-44 rounded shimmer bg-ink/10 dark:bg-white/10"></div>
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      {#each Array(6) as _}
+        <div class="aspect-[3/4] rounded-lg shimmer bg-ink/10 dark:bg-white/10"></div>
+      {/each}
+    </div>
+  </section>
+  <MangaGridSkeleton {view} />
 {:else}
-  {#if visibleItems.length}
-    <MangaGrid items={visibleItems} {view} />
+  {#if updateItems.length}
+    <section>
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-xl font-bold text-white">Update</h2>
+        <div class="flex items-center gap-2">
+          <div class="flex rounded-lg border border-white/10 bg-[#141416] p-1">
+            {#each ['Project', 'Mirror'] as tab}
+              <button
+                class="focus-ring rounded-md px-3 py-1.5 text-sm font-medium {updateTab === tab ? 'bg-violet-600 text-white' : 'text-white/60'}"
+                type="button"
+                on:click={() => (updateTab = tab)}
+              >
+                {tab}
+              </button>
+            {/each}
+          </div>
+        </div>
+      </div>
+      <MangaGrid items={updateItems} {view} />
+    </section>
   {:else}
     <div class="rounded-lg border border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
       Tidak ada manga yang bisa ditampilkan dari {sourceName}. Kalau source ini baru ditambahkan, kemungkinan parser-nya belum cocok dengan markup situs atau domainnya sedang tidak bisa diakses dari network ini.
     </div>
   {/if}
-  {#if hasNextPage}
-    <div class="mt-6 flex justify-center">
+  {#if page > 1 || hasNextPage}
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
       <button
-        class="focus-ring rounded-lg bg-ink px-5 py-2.5 text-sm font-semibold text-white dark:bg-white dark:text-ink"
+        class="focus-ring rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
         type="button"
-        disabled={loading}
+        disabled={loading || page <= 1}
+        on:click={() => loadList(page - 1)}
+      >
+        Previous
+      </button>
+      {#if page > 2}
+        <button class="focus-ring rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70" type="button" disabled={loading} on:click={() => loadList(page - 2)}>{page - 2}</button>
+      {/if}
+      {#if page > 1}
+        <button class="focus-ring rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70" type="button" disabled={loading} on:click={() => loadList(page - 1)}>{page - 1}</button>
+      {/if}
+      <span class="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">{loading ? '...' : page}</span>
+      {#if hasNextPage}
+        <button class="focus-ring rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70" type="button" disabled={loading} on:click={() => loadList(page + 1)}>{page + 1}</button>
+      {/if}
+      <button
+        class="focus-ring rounded-lg bg-white px-4 py-2 text-sm font-semibold text-ink transition disabled:cursor-not-allowed disabled:opacity-40"
+        type="button"
+        disabled={loading || !hasNextPage}
         on:click={() => loadList(page + 1)}
       >
-        {loading ? 'Loading...' : 'Load more'}
+        Next
       </button>
     </div>
   {/if}

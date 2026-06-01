@@ -22,6 +22,9 @@ export const load = async ({ fetch, params }: Parameters<PageLoad>[0]) => {
   return {
     manga: detailResponse.ok ? await detailResponse.json() : null,
     chapter,
+    chapters,
+    sourceId: params.sourceId,
+    mangaId: params.mangaId,
     pages: pagesResponse.ok ? await pagesResponse.json() : [],
     error: pagesResponse.ok ? '' : (await pagesResponse.json()).error
   };

@@ -102,6 +102,7 @@ function mangaFromTitle(title: MangaPlusTitle): Manga {
     title: title.name,
     coverUrl: title.portraitImageUrl,
     author: normalizeAuthor(title.author),
+    format: 'Manga',
     status: 'ongoing',
     genres: [],
     url: titleUrl(title.titleId)
@@ -117,7 +118,8 @@ function sortFrom(filters?: FilterInput[]) {
   const sort = filters?.find((entry) => entry.id === 'sort')?.value;
   if (sort === 'updated') return 'updated';
   if (sort === 'newest') return 'alphabetical';
-  return 'popular';
+  if (sort === 'popular' || sort === 'rating') return 'popular';
+  return 'updated';
 }
 
 export class MangaPlusSource implements MangaSource {

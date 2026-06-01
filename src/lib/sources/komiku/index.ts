@@ -10,6 +10,7 @@ import type {
   MangaSource,
   MangaStatus
 } from '$lib/sources/types';
+import { normalizeMangaFormat } from '$lib/utils/mangaFormat';
 
 const SITE_BASE = 'https://komiku.org';
 const API_BASE = 'https://api.komiku.org';
@@ -98,14 +99,16 @@ function mangaFromCard($: cheerio.CheerioAPI, element: AnyNode): Manga | null {
   const url = absoluteUrl(SITE_BASE, link.attr('href'));
   const title = clean(link.find('h3').text());
   if (!url || !title) return null;
+  const infoText = clean(node.find('.tpe1_inf').text());
 
   return {
     id: encodeId(url),
     sourceId: 'komiku',
     title,
     coverUrl: node.find('img').first().attr('data-src') ?? node.find('img').first().attr('src') ?? '',
+    format: normalizeMangaFormat(infoText),
     status: 'ongoing',
-    genres: clean(node.find('.tpe1_inf').text())
+    genres: infoText
       .split(/\s+/)
       .filter((part) => part && !/manga|manhwa|manhua/i.test(part))
       .slice(0, 4),
@@ -148,10 +151,14 @@ export class KomikuSource implements MangaSource {
       id: mangaId,
       sourceId: this.id,
       title,
-      coverUrl,
-      author: clean($('table.inftable tr:has(td:contains(Pengarang)) td:last-child').text()) || undefined,
-      description: clean($('#Sinopsis > p').text()),
-      status: statusFrom(statusText),
+    coverUrl,
+    author: clean($('table.inftable tr:has(td:contains(Pengarang)) td:last-child').text()) || undefined,
+    description: clean($('#Sinopsis > p').text()),
+    format: normalizeMangaFormat(
+      clean($('table.inftable tr:has(td:contains(Jenis Komik)) td:last-child').text()) ||
+        clean($('table.inftable tr:has(td:contains(Type)) td:last-child').text())
+    ),
+    status: statusFrom(statusText),
       genres: $('ul.genre li.genre a')
         .map((_, element) => clean($(element).text()))
         .get()

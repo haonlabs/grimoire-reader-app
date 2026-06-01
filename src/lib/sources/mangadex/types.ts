@@ -24,6 +24,7 @@ export interface MangaDexMangaAttributes {
   title: Record<string, string>;
   altTitles?: Array<Record<string, string>>;
   description?: Record<string, string>;
+  originalLanguage?: string;
   status?: string;
   year?: number;
   tags?: Array<{ attributes?: { name?: Record<string, string> } }>;

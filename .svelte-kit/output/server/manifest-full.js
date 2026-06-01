@@ -10,7 +10,7 @@ return {
 	assets: new Set(["manifest.webmanifest"]),
 	mimeTypes: {".webmanifest":"application/manifest+json"},
 	_: {
-		client: {start:"_app/immutable/entry/start.LCLQSa2d.js",app:"_app/immutable/entry/app.CoQXGQjL.js",imports:["_app/immutable/entry/start.LCLQSa2d.js","_app/immutable/chunks/B-7VoY2k.js","_app/immutable/chunks/BCCrcGiz.js","_app/immutable/chunks/OA8UcISh.js","_app/immutable/chunks/gYbkUrhJ.js","_app/immutable/entry/app.CoQXGQjL.js","_app/immutable/chunks/BCCrcGiz.js","_app/immutable/chunks/6n7FHvNB.js","_app/immutable/chunks/DNdXKaGq.js","_app/immutable/chunks/gYbkUrhJ.js","_app/immutable/chunks/BURTfFSw.js","_app/immutable/chunks/fDi2GGLf.js","_app/immutable/chunks/tOnVr7hW.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
+		client: {start:"_app/immutable/entry/start.B3_bCf5j.js",app:"_app/immutable/entry/app.BRg-oIQP.js",imports:["_app/immutable/entry/start.B3_bCf5j.js","_app/immutable/chunks/DGOuW4AJ.js","_app/immutable/chunks/B36MGmlN.js","_app/immutable/chunks/OA8UcISh.js","_app/immutable/chunks/a9nREn36.js","_app/immutable/entry/app.BRg-oIQP.js","_app/immutable/chunks/B36MGmlN.js","_app/immutable/chunks/5FInlnOS.js","_app/immutable/chunks/gvdSiGwR.js","_app/immutable/chunks/a9nREn36.js","_app/immutable/chunks/Dbb_wyEj.js","_app/immutable/chunks/C4if6abv.js","_app/immutable/chunks/d63y8raQ.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),
@@ -23,7 +23,8 @@ return {
 			__memo(() => import('./nodes/8.js')),
 			__memo(() => import('./nodes/9.js')),
 			__memo(() => import('./nodes/10.js')),
-			__memo(() => import('./nodes/11.js'))
+			__memo(() => import('./nodes/11.js')),
+			__memo(() => import('./nodes/12.js'))
 		],
 		remotes: {
 			
@@ -135,31 +136,38 @@ return {
 				endpoint: null
 			},
 			{
+				id: "/profile",
+				pattern: /^\/profile\/?$/,
+				params: [],
+				page: { layouts: [0,], errors: [1,], leaf: 8 },
+				endpoint: null
+			},
+			{
 				id: "/search",
 				pattern: /^\/search\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 8 },
+				page: { layouts: [0,], errors: [1,], leaf: 9 },
 				endpoint: null
 			},
 			{
 				id: "/settings",
 				pattern: /^\/settings\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 9 },
+				page: { layouts: [0,], errors: [1,], leaf: 10 },
 				endpoint: null
 			},
 			{
 				id: "/sources",
 				pattern: /^\/sources\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 10 },
+				page: { layouts: [0,], errors: [1,], leaf: 11 },
 				endpoint: null
 			},
 			{
 				id: "/updates",
 				pattern: /^\/updates\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 11 },
+				page: { layouts: [0,], errors: [1,], leaf: 12 },
 				endpoint: null
 			}
 		],

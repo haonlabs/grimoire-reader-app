@@ -1,4 +1,4 @@
-import { a7 as sanitize_props, af as spread_props, ad as slot, ag as store_get, j as attr, G as escape_html, ak as unsubscribe_stores } from "../../../chunks/renderer.js";
+import { a7 as sanitize_props, af as spread_props, ad as slot, ah as store_get, j as attr, G as escape_html, al as unsubscribe_stores } from "../../../chunks/renderer.js";
 import { s as settings } from "../../../chunks/settings.js";
 import { T as Trash_2 } from "../../../chunks/trash-2.js";
 import { I as Icon } from "../../../chunks/Icon.js";
@@ -82,31 +82,7 @@ function _page($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     var $$store_subs;
     let importText = "";
-    $$renderer2.push(`<section class="mb-6"><p class="text-sm font-medium text-ember">Settings</p> <h1 class="mt-1 text-3xl font-bold">Reader and app preferences</h1></section> <div class="grid gap-6 xl:grid-cols-2"><section class="rounded-lg border border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-white/5"><h2 class="text-lg font-semibold">Reader</h2> <div class="mt-4 grid gap-4 sm:grid-cols-2"><label class="grid gap-1 text-sm">Mode `);
-    $$renderer2.select(
-      {
-        class: "focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10",
-        value: store_get($$store_subs ??= {}, "$settings", settings).reader.mode
-      },
-      ($$renderer3) => {
-        $$renderer3.option({ value: "rtl" }, ($$renderer4) => {
-          $$renderer4.push(`Horizontal RTL`);
-        });
-        $$renderer3.option({ value: "ltr" }, ($$renderer4) => {
-          $$renderer4.push(`Horizontal LTR`);
-        });
-        $$renderer3.option({ value: "vertical" }, ($$renderer4) => {
-          $$renderer4.push(`Vertical Scroll`);
-        });
-        $$renderer3.option({ value: "single" }, ($$renderer4) => {
-          $$renderer4.push(`Single Page`);
-        });
-        $$renderer3.option({ value: "double" }, ($$renderer4) => {
-          $$renderer4.push(`Double Page`);
-        });
-      }
-    );
-    $$renderer2.push(`</label> <label class="grid gap-1 text-sm">Fit `);
+    $$renderer2.push(`<section class="mb-6"><p class="text-sm font-medium text-ember">Settings</p> <h1 class="mt-1 text-3xl font-bold">Reader and app preferences</h1></section> <div class="grid gap-6 xl:grid-cols-2"><section class="rounded-lg border border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-white/5"><h2 class="text-lg font-semibold">Reader</h2> <div class="mt-4 grid gap-4 sm:grid-cols-2"><label class="grid gap-1 text-sm">Fit `);
     $$renderer2.select(
       {
         class: "focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10",
@@ -145,7 +121,7 @@ function _page($$renderer, $$props) {
         });
       }
     );
-    $$renderer2.push(`</label> <label class="grid gap-1 text-sm">Preload pages <input class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10" type="number" min="1" max="10"${attr("value", store_get($$store_subs ??= {}, "$settings", settings).reader.preloadPages)}/></label> <label class="flex items-center gap-2 text-sm"><input type="checkbox"${attr("checked", store_get($$store_subs ??= {}, "$settings", settings).reader.showPageNumber, true)}/> Show page number overlay</label> <label class="flex items-center gap-2 text-sm"><input type="checkbox"${attr("checked", store_get($$store_subs ??= {}, "$settings", settings).reader.incognito, true)}/> Incognito reading</label></div></section> <section class="rounded-lg border border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-white/5"><h2 class="text-lg font-semibold">Application</h2> <div class="mt-4 grid gap-4 sm:grid-cols-2"><label class="grid gap-1 text-sm">Theme `);
+    $$renderer2.push(`</label> <label class="grid gap-1 text-sm">Preload pages <input class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10" type="number" min="1" max="10"${attr("value", store_get($$store_subs ??= {}, "$settings", settings).reader.preloadPages)}/></label> <label class="flex items-center gap-2 text-sm"><input type="checkbox"${attr("checked", store_get($$store_subs ??= {}, "$settings", settings).reader.incognito, true)}/> Incognito reading</label></div></section> <section class="rounded-lg border border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-white/5"><h2 class="text-lg font-semibold">Application</h2> <div class="mt-4 grid gap-4 sm:grid-cols-2"><label class="grid gap-1 text-sm">Theme `);
     $$renderer2.select(
       {
         class: "focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/10",

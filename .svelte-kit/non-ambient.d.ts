@@ -29,7 +29,7 @@ declare module "$app/types" {
 	type MatcherParam<M> = M extends (param : string) => param is (infer U extends string) ? U : string;
 
 	export interface AppTypes {
-		RouteId(): "/" | "/api" | "/api/image-proxy" | "/api/sources" | "/api/[sourceId]" | "/api/[sourceId]/chapter" | "/api/[sourceId]/chapter/[chapterId]" | "/api/[sourceId]/chapter/[chapterId]/pages" | "/api/[sourceId]/filters" | "/api/[sourceId]/list" | "/api/[sourceId]/manga" | "/api/[sourceId]/manga/[mangaId]" | "/api/[sourceId]/manga/[mangaId]/chapters" | "/api/[sourceId]/manga/[mangaId]/chapters/[chapterId]" | "/api/[sourceId]/manga/[mangaId]/chapters/[chapterId]/pages" | "/api/[sourceId]/search" | "/explore" | "/history" | "/library" | "/manga" | "/manga/[sourceId]" | "/manga/[sourceId]/[mangaId]" | "/manga/[sourceId]/[mangaId]/[chapterId]" | "/search" | "/settings" | "/sources" | "/updates";
+		RouteId(): "/" | "/api" | "/api/image-proxy" | "/api/sources" | "/api/[sourceId]" | "/api/[sourceId]/chapter" | "/api/[sourceId]/chapter/[chapterId]" | "/api/[sourceId]/chapter/[chapterId]/pages" | "/api/[sourceId]/filters" | "/api/[sourceId]/list" | "/api/[sourceId]/manga" | "/api/[sourceId]/manga/[mangaId]" | "/api/[sourceId]/manga/[mangaId]/chapters" | "/api/[sourceId]/manga/[mangaId]/chapters/[chapterId]" | "/api/[sourceId]/manga/[mangaId]/chapters/[chapterId]/pages" | "/api/[sourceId]/search" | "/explore" | "/history" | "/library" | "/manga" | "/manga/[sourceId]" | "/manga/[sourceId]/[mangaId]" | "/manga/[sourceId]/[mangaId]/[chapterId]" | "/profile" | "/search" | "/settings" | "/sources" | "/updates";
 		RouteParams(): {
 			"/api/[sourceId]": { sourceId: string };
 			"/api/[sourceId]/chapter": { sourceId: string };
@@ -71,12 +71,13 @@ declare module "$app/types" {
 			"/manga/[sourceId]": { sourceId: string; mangaId?: string | undefined; chapterId?: string | undefined };
 			"/manga/[sourceId]/[mangaId]": { sourceId: string; mangaId: string; chapterId?: string | undefined };
 			"/manga/[sourceId]/[mangaId]/[chapterId]": { sourceId: string; mangaId: string; chapterId: string };
+			"/profile": Record<string, never>;
 			"/search": Record<string, never>;
 			"/settings": Record<string, never>;
 			"/sources": Record<string, never>;
 			"/updates": Record<string, never>
 		};
-		Pathname(): "/" | "/api/image-proxy" | "/api/sources" | `/api/${string}/chapter/${string}/pages` & {} | `/api/${string}/filters` & {} | `/api/${string}/list` & {} | `/api/${string}/manga/${string}` & {} | `/api/${string}/manga/${string}/chapters` & {} | `/api/${string}/manga/${string}/chapters/${string}/pages` & {} | `/api/${string}/search` & {} | "/explore" | "/history" | "/library" | `/manga/${string}/${string}` & {} | `/manga/${string}/${string}/${string}` & {} | "/search" | "/settings" | "/sources" | "/updates";
+		Pathname(): "/" | "/api/image-proxy" | "/api/sources" | `/api/${string}/chapter/${string}/pages` & {} | `/api/${string}/filters` & {} | `/api/${string}/list` & {} | `/api/${string}/manga/${string}` & {} | `/api/${string}/manga/${string}/chapters` & {} | `/api/${string}/manga/${string}/chapters/${string}/pages` & {} | `/api/${string}/search` & {} | "/explore" | "/history" | "/library" | `/manga/${string}/${string}` & {} | `/manga/${string}/${string}/${string}` & {} | "/profile" | "/search" | "/settings" | "/sources" | "/updates";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/manifest.webmanifest" | string & {};
 	}

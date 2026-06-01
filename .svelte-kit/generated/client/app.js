@@ -12,7 +12,8 @@ export const nodes = [
 	() => import('./nodes/8'),
 	() => import('./nodes/9'),
 	() => import('./nodes/10'),
-	() => import('./nodes/11')
+	() => import('./nodes/11'),
+	() => import('./nodes/12')
 ];
 
 export const server_loads = [];
@@ -24,10 +25,11 @@ export const dictionary = {
 		"/library": [5],
 		"/manga/[sourceId]/[mangaId]": [6],
 		"/manga/[sourceId]/[mangaId]/[chapterId]": [7],
-		"/search": [8],
-		"/settings": [9],
-		"/sources": [10],
-		"/updates": [11]
+		"/profile": [8],
+		"/search": [9],
+		"/settings": [10],
+		"/sources": [11],
+		"/updates": [12]
 	};
 
 export const hooks = {

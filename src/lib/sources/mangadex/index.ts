@@ -6,7 +6,8 @@ import type {
   MangaDetail,
   MangaListResult,
   MangaSource,
-  MangaStatus
+  MangaStatus,
+  MangaFormat
 } from '$lib/sources/types';
 import type {
   MangaDexChapterAttributes,
@@ -49,6 +50,12 @@ function mangaUrl(id: string) {
   return `https://mangadex.org/title/${id}`;
 }
 
+function formatFromLanguage(language?: string): MangaFormat {
+  if (language === 'ko') return 'Manhwa';
+  if (language === 'zh' || language === 'zh-hk') return 'Manhua';
+  return 'Manga';
+}
+
 function mangaFromEntity(entity: MangaDexEntity<MangaDexMangaAttributes>): Manga {
   const attributes = entity.attributes;
   const author = getRelationship(entity, 'author')?.attributes?.name;
@@ -61,6 +68,7 @@ function mangaFromEntity(entity: MangaDexEntity<MangaDexMangaAttributes>): Manga
     author: typeof author === 'string' ? author : undefined,
     artist: typeof artist === 'string' ? artist : undefined,
     description: descriptionFrom(attributes.description),
+    format: formatFromLanguage(attributes.originalLanguage),
     status: statusFrom(attributes.status),
     genres:
       attributes.tags
@@ -132,7 +140,8 @@ function sortQuery(filters?: FilterInput[]) {
   if (sort === 'newest') return 'order[createdAt]=desc';
   if (sort === 'updated') return 'order[updatedAt]=desc';
   if (sort === 'rating') return 'order[rating]=desc';
-  return 'order[followedCount]=desc';
+  if (sort === 'popular') return 'order[followedCount]=desc';
+  return 'order[updatedAt]=desc';
 }
 
 function listPath(page: number, query?: string, filters?: FilterInput[]) {

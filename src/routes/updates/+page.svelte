@@ -32,26 +32,35 @@
   onMount(checkUpdates);
 </script>
 
-<section class="mb-6 flex items-end justify-between gap-3">
+<section class="mb-6 flex items-end justify-between gap-3 rounded-lg border border-white/10 bg-[#111116] p-4 shadow-soft">
   <div>
     <p class="text-sm font-medium text-ember">Updates</p>
-    <h1 class="mt-1 text-3xl font-bold">Latest library chapters</h1>
+    <h1 class="mt-1 text-3xl font-bold text-white">Latest library chapters</h1>
   </div>
-  <button class="focus-ring inline-flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-ink" type="button" on:click={checkUpdates}>
+  <button class="focus-ring inline-flex items-center gap-2 rounded-lg bg-ember px-3 py-2 text-sm font-semibold text-white" type="button" on:click={checkUpdates}>
     <RefreshCw class={loading ? 'animate-spin' : ''} size={17} />
     Check
   </button>
 </section>
 
-<div class="divide-y divide-ink/10 overflow-hidden rounded-lg border border-ink/10 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-white/5">
+<div class="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-[#111116]">
   {#each updates as item (item.chapter.id)}
-    <a class="block p-4 transition hover:bg-ink/5 dark:hover:bg-white/10" href={`/manga/${item.manga.sourceId}/${item.manga.id}/${item.chapter.id}`}>
-      <p class="font-semibold">{item.manga.title}</p>
-      <p class="mt-1 text-sm text-ink/60 dark:text-white/60">Chapter {item.chapter.number || '?'} · {new Date(item.chapter.uploadedAt).toLocaleString()}</p>
+    <a class="block p-4 transition hover:bg-white/10" href={`/manga/${item.manga.sourceId}/${item.manga.id}/${item.chapter.id}`}>
+      <p class="font-semibold text-white">{item.manga.title}</p>
+      <p class="mt-1 text-sm text-white/60">Chapter {item.chapter.number || '?'} · {new Date(item.chapter.uploadedAt).toLocaleString()}</p>
     </a>
   {:else}
-    <div class="p-6 text-sm text-ink/55 dark:text-white/55">
-      {loading ? 'Checking your library...' : 'No updates found. Add manga to the library first.'}
-    </div>
+    {#if loading}
+      <div class="grid gap-3 p-4" aria-label="Checking library updates">
+        {#each Array(4) as _}
+          <div class="space-y-2 rounded-lg border border-white/10 p-3">
+            <div class="h-4 w-2/3 rounded shimmer bg-white/10"></div>
+            <div class="h-3 w-1/2 rounded shimmer bg-white/10"></div>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class="p-6 text-sm text-white/55">No updates found. Add manga to the library first.</div>
+    {/if}
   {/each}
 </div>

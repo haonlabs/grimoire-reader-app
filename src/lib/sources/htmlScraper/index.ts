@@ -11,6 +11,7 @@ import type {
   MangaStatus,
   SourceHealth
 } from '$lib/sources/types';
+import { normalizeMangaFormat } from '$lib/utils/mangaFormat';
 
 const REQUEST_TIMEOUT = 15_000;
 const CARD_SELECTORS = [
@@ -343,6 +344,7 @@ export class HtmlScraperSource implements MangaSource {
         sourceId: this.id,
         title,
         coverUrl: imageFrom($, element, this.baseUrl),
+        format: normalizeMangaFormat(clean($(element).text())),
         status: statusFrom(clean($(element).text())),
         genres: [],
         url: href

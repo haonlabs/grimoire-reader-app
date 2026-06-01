@@ -5,13 +5,23 @@
   export let data: {
     manga: MangaDetail | null;
     chapter: Chapter;
+    chapters: Chapter[];
+    sourceId: string;
+    mangaId: string;
     pages: string[];
     error: string;
   };
 </script>
 
 {#if data.manga}
-  <Reader manga={data.manga} chapter={data.chapter} pages={data.pages} />
+  <Reader
+    manga={data.manga}
+    chapter={data.chapter}
+    chapters={data.chapters}
+    sourceId={data.sourceId}
+    mangaId={data.mangaId}
+    pages={data.pages}
+  />
 {:else}
   <div class="grid min-h-screen place-items-center bg-ink p-6 text-white">
     <div class="max-w-md rounded-lg border border-white/10 bg-white/10 p-5">

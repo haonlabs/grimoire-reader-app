@@ -48,19 +48,23 @@ function Refresh_cw($$renderer, $$props) {
 function _page($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     let updates = [];
-    $$renderer2.push(`<section class="mb-6 flex items-end justify-between gap-3"><div><p class="text-sm font-medium text-ember">Updates</p> <h1 class="mt-1 text-3xl font-bold">Latest library chapters</h1></div> <button class="focus-ring inline-flex items-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-ink" type="button">`);
+    $$renderer2.push(`<section class="mb-6 flex items-end justify-between gap-3 rounded-lg border border-white/10 bg-[#111116] p-4 shadow-soft"><div><p class="text-sm font-medium text-ember">Updates</p> <h1 class="mt-1 text-3xl font-bold text-white">Latest library chapters</h1></div> <button class="focus-ring inline-flex items-center gap-2 rounded-lg bg-ember px-3 py-2 text-sm font-semibold text-white" type="button">`);
     Refresh_cw($$renderer2, { class: "", size: 17 });
-    $$renderer2.push(`<!----> Check</button></section> <div class="divide-y divide-ink/10 overflow-hidden rounded-lg border border-ink/10 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-white/5">`);
+    $$renderer2.push(`<!----> Check</button></section> <div class="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-[#111116]">`);
     const each_array = ensure_array_like(updates);
     if (each_array.length !== 0) {
       $$renderer2.push("<!--[-->");
-      for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
-        let item = each_array[$$index];
-        $$renderer2.push(`<a class="block p-4 transition hover:bg-ink/5 dark:hover:bg-white/10"${attr("href", `/manga/${item.manga.sourceId}/${item.manga.id}/${item.chapter.id}`)}><p class="font-semibold">${escape_html(item.manga.title)}</p> <p class="mt-1 text-sm text-ink/60 dark:text-white/60">Chapter ${escape_html(item.chapter.number || "?")} · ${escape_html(new Date(item.chapter.uploadedAt).toLocaleString())}</p></a>`);
+      for (let $$index_1 = 0, $$length = each_array.length; $$index_1 < $$length; $$index_1++) {
+        let item = each_array[$$index_1];
+        $$renderer2.push(`<a class="block p-4 transition hover:bg-white/10"${attr("href", `/manga/${item.manga.sourceId}/${item.manga.id}/${item.chapter.id}`)}><p class="font-semibold text-white">${escape_html(item.manga.title)}</p> <p class="mt-1 text-sm text-white/60">Chapter ${escape_html(item.chapter.number || "?")} · ${escape_html(new Date(item.chapter.uploadedAt).toLocaleString())}</p></a>`);
       }
     } else {
       $$renderer2.push("<!--[!-->");
-      $$renderer2.push(`<div class="p-6 text-sm text-ink/55 dark:text-white/55">${escape_html("No updates found. Add manga to the library first.")}</div>`);
+      {
+        $$renderer2.push("<!--[-1-->");
+        $$renderer2.push(`<div class="p-6 text-sm text-white/55">No updates found. Add manga to the library first.</div>`);
+      }
+      $$renderer2.push(`<!--]-->`);
     }
     $$renderer2.push(`<!--]--></div>`);
   });

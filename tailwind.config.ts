@@ -6,9 +6,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#141318',
-        paper: '#f8f7f2',
-        ember: '#c84f31',
+        ink: '#0a0a0c',
+        paper: '#f5f5f5',
+        ember: '#7c3aed',
         moss: '#4f6f52',
         gold: '#d7a948'
       },

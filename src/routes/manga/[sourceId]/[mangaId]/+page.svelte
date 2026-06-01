@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Bookmark, BookOpen, Check, RotateCcw } from 'lucide-svelte';
+  import { Bookmark, BookOpen, Check, Eye, Plus, RotateCcw, Star, Trophy } from 'lucide-svelte';
   import ChapterList from '$lib/components/manga/ChapterList.svelte';
   import type { Chapter, MangaDetail } from '$lib/sources/types';
   import { proxiedImageUrl } from '$lib/utils/image';
+  import { mangaFormatLabel } from '$lib/utils/mangaFormat';
   import { library } from '$lib/stores/library';
   import { readChapters } from '$lib/stores/history';
 
@@ -15,10 +16,16 @@
   };
 
   let sort: 'newest' | 'oldest' = 'newest';
+  let coverLoaded = false;
+  let activeTab: 'Chapters' | 'Info' | 'Novel' = 'Chapters';
+  let descriptionOpen = false;
   $: inLibrary = Boolean(
     data.manga && $library.some((entry) => entry.manga.id === data.manga?.id && entry.manga.sourceId === data.manga?.sourceId)
   );
   $: firstChapter = [...data.chapters].sort((a, b) => a.number - b.number)[0];
+  $: ratingLabel = data.manga?.rating ? data.manga.rating.toFixed(1) : '-';
+  $: description = data.manga?.description ?? '';
+  $: formatLabel = data.manga ? mangaFormatLabel(data.manga) : 'Manga';
 
   function addToLibrary() {
     if (!data.manga || inLibrary) return;
@@ -31,6 +38,10 @@
       ...entries
     ]);
   }
+
+  function setActiveTab(tab: string) {
+    if (tab === 'Chapters' || tab === 'Info' || tab === 'Novel') activeTab = tab;
+  }
 </script>
 
 <svelte:head>
@@ -38,74 +49,164 @@
 </svelte:head>
 
 {#if data.error || !data.manga}
-  <div class="rounded-lg border border-ember/30 bg-ember/10 p-5 text-ember">
+  <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-5 text-red-200">
     <p class="font-semibold">Unable to load manga</p>
     <p class="mt-1 text-sm">{data.error}</p>
   </div>
 {:else}
   <section class="grid gap-6 lg:grid-cols-[18rem_1fr]">
-    <div>
-      <div class="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-soft dark:border-white/10 dark:bg-white/5">
+    <div class="mx-auto w-52 sm:w-64 lg:sticky lg:top-24 lg:w-full lg:self-start">
+      <div class="relative overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-soft">
         {#if data.manga.coverUrl}
-          <img class="aspect-[2/3] w-full object-cover" src={proxiedImageUrl(data.manga.coverUrl)} alt={data.manga.title} />
+          {#if !coverLoaded}
+            <div class="absolute inset-0 shimmer bg-white/10"></div>
+          {/if}
+          <img
+            class="aspect-[2/3] w-full object-cover transition-opacity duration-200 {coverLoaded ? 'opacity-100' : 'opacity-0'}"
+            src={proxiedImageUrl(data.manga.coverUrl)}
+            alt={data.manga.title}
+            on:load={() => (coverLoaded = true)}
+          />
+        {:else}
+          <div class="aspect-[2/3] shimmer bg-white/10"></div>
         {/if}
-      </div>
-      <div class="mt-4 grid grid-cols-2 gap-2">
-        <button
-          class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-3 py-2.5 text-sm font-semibold text-white dark:bg-white dark:text-ink"
-          type="button"
-          on:click={addToLibrary}
-        >
-          {#if inLibrary}<Check size={17} /> Saved{:else}<Bookmark size={17} /> Library{/if}
-        </button>
-        {#if firstChapter}
-          <a
-            class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-ink/10 bg-white px-3 py-2.5 text-sm font-semibold text-ink dark:border-white/10 dark:bg-white/10 dark:text-white"
-            href={`/manga/${data.sourceId}/${data.mangaId}/${firstChapter.id}`}
-          >
-            <BookOpen size={17} />
-            Start
-          </a>
-        {/if}
+        <span class="absolute left-3 top-3 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-soft">
+          {formatLabel}
+        </span>
       </div>
     </div>
 
     <div class="min-w-0">
-      <p class="text-sm font-medium uppercase text-ember">{data.sourceId}</p>
-      <h1 class="mt-1 text-3xl font-bold md:text-4xl">{data.manga.title}</h1>
-      <div class="mt-3 flex flex-wrap gap-2 text-sm text-ink/60 dark:text-white/60">
-        <span class="capitalize">{data.manga.status}</span>
-        {#if data.manga.author}<span>Author: {data.manga.author}</span>{/if}
-        {#if data.manga.artist}<span>Artist: {data.manga.artist}</span>{/if}
-        {#if data.manga.year}<span>{data.manga.year}</span>{/if}
+      <p class="text-sm font-semibold uppercase tracking-wide text-violet-300">{data.sourceId}</p>
+      <h1 class="mt-1 text-3xl font-extrabold leading-tight text-white md:text-4xl">{data.manga.title}</h1>
+
+      <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {#if firstChapter}
+          <a
+            class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white"
+            href={`/manga/${data.sourceId}/${data.mangaId}/${firstChapter.id}`}
+          >
+            <BookOpen size={17} />
+            Baca
+          </a>
+        {/if}
+        <button
+          class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#141416] px-4 py-3 text-sm font-semibold text-white"
+          type="button"
+          on:click={addToLibrary}
+        >
+          {#if inLibrary}<Check size={17} /> Bookmark{:else}<Bookmark size={17} /> Bookmark{/if}
+        </button>
+        <button
+          class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#141416] px-4 py-3 text-sm font-semibold text-white"
+          type="button"
+          on:click={addToLibrary}
+        >
+          <Plus size={17} />
+          Tambah ke Readlist
+        </button>
       </div>
 
-      <div class="mt-4 flex flex-wrap gap-2">
-        {#each data.manga.genres as genre}
-          <span class="rounded border border-ink/10 px-2 py-1 text-xs text-ink/65 dark:border-white/10 dark:text-white/65">{genre}</span>
-        {/each}
-      </div>
-
-      <p class="mt-5 max-w-3xl whitespace-pre-line text-sm leading-7 text-ink/70 dark:text-white/70">{data.manga.description}</p>
-
-      <div class="mt-8 flex items-center justify-between gap-3">
-        <div>
-          <h2 class="text-xl font-semibold">Chapters</h2>
-          <p class="text-sm text-ink/50 dark:text-white/50">{data.chapters.length} chapters found</p>
+      <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div class="rounded-lg border border-white/10 bg-[#101012] p-3">
+          <div class="flex items-center gap-2 text-gold"><Star size={17} class="fill-gold" /><span class="font-bold">{ratingLabel}</span></div>
+          <p class="mt-1 text-xs text-white/45">Rating</p>
         </div>
-        <div class="flex items-center gap-2">
-          <select class="focus-ring rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10" bind:value={sort}>
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-          </select>
-          <button class="focus-ring rounded-lg border border-ink/10 bg-white p-2 dark:border-white/10 dark:bg-white/10" title="Refresh" on:click={() => location.reload()}>
-            <RotateCcw size={18} />
+        <div class="rounded-lg border border-white/10 bg-[#101012] p-3">
+          <div class="flex items-center gap-2 text-white"><Bookmark size={17} /><span class="font-bold">{data.chapters.length}</span></div>
+          <p class="mt-1 text-xs text-white/45">Chapter</p>
+        </div>
+        <div class="rounded-lg border border-white/10 bg-[#101012] p-3">
+          <div class="flex items-center gap-2 text-white"><Eye size={17} /><span class="font-bold capitalize">{data.manga.status}</span></div>
+          <p class="mt-1 text-xs text-white/45">Status</p>
+        </div>
+        <div class="rounded-lg border border-white/10 bg-[#101012] p-3">
+          <div class="flex items-center gap-2 text-white"><Trophy size={17} /><span class="font-bold">{data.manga.year ?? '-'}</span></div>
+          <p class="mt-1 text-xs text-white/45">Year</p>
+        </div>
+      </div>
+
+      <div class="mt-5 max-w-3xl">
+        <p class="whitespace-pre-line text-sm leading-7 text-white/70 {descriptionOpen ? '' : 'line-clamp-4'}">{description}</p>
+        {#if description.length > 220}
+          <button class="mt-2 text-sm font-semibold text-violet-300" type="button" on:click={() => (descriptionOpen = !descriptionOpen)}>
+            {descriptionOpen ? 'Read Less' : 'Read More'}
           </button>
+        {/if}
+      </div>
+
+      <div class="mt-6 grid gap-3">
+        {#if data.manga.genres.length}
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-white/45">Genre</p>
+            <div class="flex flex-wrap gap-2">
+              {#each data.manga.genres as genre}
+                <span class="rounded-md border border-white/10 bg-[#141416] px-2 py-1 text-xs text-white/70">{genre}</span>
+              {/each}
+            </div>
+          </div>
+        {/if}
+        <div class="grid gap-3 sm:grid-cols-2">
+          {#if data.manga.author}
+            <div>
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-white/45">Author</p>
+              <span class="rounded-md border border-white/10 bg-[#141416] px-2 py-1 text-xs text-white/70">{data.manga.author}</span>
+            </div>
+          {/if}
+          {#if data.manga.artist}
+            <div>
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-white/45">Artist</p>
+              <span class="rounded-md border border-white/10 bg-[#141416] px-2 py-1 text-xs text-white/70">{data.manga.artist}</span>
+            </div>
+          {/if}
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-white/45">Format</p>
+            <span class="rounded-md border border-white/10 bg-[#141416] px-2 py-1 text-xs text-white/70">{formatLabel}</span>
+          </div>
+          <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-white/45">Type</p>
+            <span class="rounded-md border border-white/10 bg-[#141416] px-2 py-1 text-xs text-white/70 capitalize">{data.sourceId}</span>
+          </div>
         </div>
       </div>
 
-      <div class="mt-3">
-        <ChapterList chapters={data.chapters} mangaId={data.mangaId} sourceId={data.sourceId} readMap={$readChapters} {sort} />
+      <div class="mt-8">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/10">
+          <div class="flex gap-1">
+            {#each ['Chapters', 'Info', 'Novel'] as tab}
+              <button
+                class="focus-ring px-4 py-3 text-sm font-semibold {activeTab === tab ? 'border-b-2 border-violet-500 text-white' : 'text-white/50'}"
+                type="button"
+                on:click={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            {/each}
+          </div>
+          {#if activeTab === 'Chapters'}
+            <div class="flex items-center gap-2 pb-3">
+              <select class="focus-ring rounded-lg border border-white/10 bg-[#141416] px-3 py-2 text-sm text-white" bind:value={sort}>
+                <option class="bg-ink" value="newest">Newest</option>
+                <option class="bg-ink" value="oldest">Oldest</option>
+              </select>
+              <button class="focus-ring rounded-lg border border-white/10 bg-[#141416] p-2 text-white" title="Refresh" on:click={() => location.reload()}>
+                <RotateCcw size={18} />
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        {#if activeTab === 'Chapters'}
+          <ChapterList chapters={data.chapters} mangaId={data.mangaId} sourceId={data.sourceId} readMap={$readChapters} {sort} coverUrl={data.manga.coverUrl} />
+        {:else if activeTab === 'Info'}
+          <div class="rounded-lg border border-white/10 bg-[#101012] p-4 text-sm leading-7 text-white/65">
+            {description}
+          </div>
+        {:else}
+          <div class="rounded-lg border border-white/10 bg-[#101012] p-4 text-sm text-white/55">
+            Novel belum tersedia untuk judul ini.
+          </div>
+        {/if}
       </div>
     </div>
   </section>

@@ -69,7 +69,6 @@ declare module '$env/static/private' {
 	export const npm_execpath: string;
 	export const PAGER: string;
 	export const PATH: string;
-	export const CODEX_SANDBOX: string;
 	export const ZSH_TMUX_AUTOSTART: string;
 	export const npm_package_json: string;
 	export const _: string;
@@ -124,8 +123,9 @@ declare module '$env/static/private' {
 	export const GVM_PATH_BACKUP: string;
 	export const COLORTERM: string;
 	export const CODEX_INTERNAL_ORIGINATOR_OVERRIDE: string;
-	export const NINJA_ENV: string;
+	export const CONSOLE_NINJA_WELCOME_SHOWN: string;
 	export const NODE_ENV: string;
+	export const CONSOLE_NINJA_PREVIEW_ONLY_SHOWN: string;
 }
 
 /**
@@ -243,7 +243,6 @@ declare module '$env/dynamic/private' {
 		npm_execpath: string;
 		PAGER: string;
 		PATH: string;
-		CODEX_SANDBOX: string;
 		ZSH_TMUX_AUTOSTART: string;
 		npm_package_json: string;
 		_: string;
@@ -298,8 +297,9 @@ declare module '$env/dynamic/private' {
 		GVM_PATH_BACKUP: string;
 		COLORTERM: string;
 		CODEX_INTERNAL_ORIGINATOR_OVERRIDE: string;
-		NINJA_ENV: string;
+		CONSOLE_NINJA_WELCOME_SHOWN: string;
 		NODE_ENV: string;
+		CONSOLE_NINJA_PREVIEW_ONLY_SHOWN: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}

@@ -125,6 +125,7 @@ function cardToManga($: cheerio.CheerioAPI, element: AnyNode): Manga | null {
     sourceId: 'mangafire',
     title,
     coverUrl: absoluteUrl(SITE_BASE, node.find('img').first().attr('src')),
+    format: 'Manga',
     status: 'ongoing',
     genres: [],
     url
