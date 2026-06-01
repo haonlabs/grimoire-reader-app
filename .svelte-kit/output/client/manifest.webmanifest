@@ -1,9 +1,0 @@
-{
-  "name": "Grimoire Reader",
-  "short_name": "Grimoire",
-  "start_url": "/explore",
-  "display": "standalone",
-  "background_color": "#141318",
-  "theme_color": "#141318",
-  "description": "Stateless web manga reader with extensible source plugins."
-}

@@ -1,1 +1,0 @@
-import{au as o,as as l,X as p,l as v,aW as y,bd as f,b7 as m,b8 as i,p as T,at as b}from"./gY2Fb35a.js";import{B as A}from"./DM-b_rEO.js";function E(d,_,s){var t;o&&(t=b,l());var r=new A(d);p(()=>{var a=_()??null;if(o){var h=y(t),u=h===T,c=a!==null;if(u!==c){var e=f();m(e),r.anchor=e,i(!1),r.ensure(a,a&&(n=>s(n,a))),i(!0);return}}r.ensure(a,a&&(n=>s(n,a)))},v)}export{E as c};
