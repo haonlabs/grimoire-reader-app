@@ -21,7 +21,6 @@
   let page = 1;
   let loading = false;
   let error = '';
-  let paginationNotice = '';
   let hasNextPage = false;
   let view: 'grid' | 'list' = 'grid';
   let sort = 'updated';
@@ -77,7 +76,6 @@
     loading = true;
     loadingStartedAt = Date.now();
     error = '';
-    paginationNotice = '';
     const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
     try {
       const response = await fetch(`/api/${sourceId}/list?page=${nextPage}&filters=${filters}&_=${Date.now()}`, {
@@ -100,65 +98,6 @@
       error = err instanceof Error && err.name === 'AbortError' ? 'Source terlalu lama merespons. Coba refresh atau pilih source lain.' : err instanceof Error ? err.message : 'Unable to load manga';
       items = [];
       featured = [];
-    } finally {
-      if (activeTimeout) window.clearTimeout(activeTimeout);
-      if (activeController === controller) activeController = undefined;
-      if (currentRequest === requestId) loading = false;
-    }
-  }
-
-  async function loadLastPage() {
-    activeController?.abort();
-    if (activeTimeout) window.clearTimeout(activeTimeout);
-    const currentRequest = ++requestId;
-    const controller = new AbortController();
-    activeController = controller;
-    activeTimeout = window.setTimeout(() => controller.abort(), 90_000);
-    loading = true;
-    loadingStartedAt = Date.now();
-    error = '';
-    paginationNotice = '';
-    const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
-
-    try {
-      let targetPage = Math.max(1, page);
-      let lastResult: MangaListResult | undefined;
-      const maxSteps = 120;
-
-      for (let step = 0; step < maxSteps; step += 1) {
-        const response = await fetch(`/api/${sourceId}/list?page=${targetPage}&filters=${filters}&_=${Date.now()}`, {
-          cache: 'no-store',
-          signal: controller.signal
-        });
-        if (currentRequest !== requestId) return;
-        if (!response.ok) {
-          const body = await response.json();
-          throw new Error(body.error ?? 'Source failed');
-        }
-
-        const result = (await response.json()) as MangaListResult;
-        if (currentRequest !== requestId) return;
-        lastResult = result;
-        if (!result.hasNextPage || !result.items.length) break;
-        targetPage = result.page + 1;
-      }
-
-      if (!lastResult) return;
-      items = uniqueManga(lastResult.items);
-      page = lastResult.page;
-      hasNextPage = lastResult.hasNextPage;
-      featured = lastResult.items.slice(0, 6);
-      if (lastResult.hasNextPage) {
-        paginationNotice = 'Halaman akhir terlalu jauh untuk dicari sekaligus. Sudah dibawa ke halaman terjauh yang berhasil dimuat.';
-      }
-    } catch (err) {
-      if (currentRequest !== requestId) return;
-      error =
-        err instanceof Error && err.name === 'AbortError'
-          ? 'Source terlalu lama mencari halaman akhir. Coba next beberapa halaman atau pilih source lain.'
-          : err instanceof Error
-            ? err.message
-            : 'Unable to load manga';
     } finally {
       if (activeTimeout) window.clearTimeout(activeTimeout);
       if (activeController === controller) activeController = undefined;
@@ -332,9 +271,6 @@
     </Card>
   {/if}
   {#if page > 1 || hasNextPage}
-    {#if paginationNotice}
-      <div class="mt-6 rounded-lg border border-white/10 bg-white/10 p-3 text-center text-sm text-white/70">{paginationNotice}</div>
-    {/if}
     <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
       <Button
         variant="outline"
@@ -362,13 +298,6 @@
       {/if}
       <Button disabled={loading || !hasNextPage} on:click={() => loadList(page + 1)}>
         Next
-      </Button>
-      <Button
-        variant="outline"
-        disabled={loading || !hasNextPage}
-        on:click={loadLastPage}
-      >
-        Last
       </Button>
     </div>
   {/if}

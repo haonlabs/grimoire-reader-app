@@ -170,8 +170,7 @@
           {#if $enabledSources.includes(source.id)}<CircleOff size={16} /> Remove{:else}<CheckCircle2 size={16} /> Add{/if}
         </Button>
         <Button
-          variant={activeSource === source.id ? 'outline' : 'secondary'}
-          class={activeSource === source.id ? 'bg-white text-ink hover:bg-white/90' : ''}
+          variant={activeSource === source.id ? 'default' : 'secondary'}
           disabled={source.isImplemented === false}
           on:click={() => setDefaultSource(source.id)}
         >
