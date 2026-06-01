@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import { BookOpen, Star } from 'lucide-svelte';
   import type { Manga } from '$lib/sources/types';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
   import { proxiedImageUrl } from '$lib/utils/image';
 
@@ -8,7 +10,29 @@
   export let compact = false;
 
   let coverLoaded = false;
+  let coverFailed = false;
+  let coverElement: HTMLImageElement | undefined;
+  let lastCoverUrl = '';
+  let coverCheckQueued = false;
   $: format = mangaFormatLabel(manga);
+  $: coverUrl = manga.coverUrl ?? '';
+  $: if (coverUrl !== lastCoverUrl) {
+    lastCoverUrl = coverUrl;
+    coverLoaded = false;
+    coverFailed = false;
+  }
+  $: if (coverElement && coverUrl && !coverLoaded && !coverFailed) checkCachedCover();
+
+  async function checkCachedCover() {
+    if (coverCheckQueued) return;
+    coverCheckQueued = true;
+    await tick();
+    coverCheckQueued = false;
+    if (!coverElement || coverLoaded || coverFailed) return;
+    if (!coverElement.complete) return;
+    if (coverElement.naturalWidth > 0) coverLoaded = true;
+    else coverFailed = true;
+  }
 </script>
 
 <a
@@ -16,16 +40,21 @@
   href={`/manga/${manga.sourceId}/${manga.id}`}
 >
   <div class="relative aspect-[2/3] bg-ink/10 dark:bg-white/10">
-    {#if manga.coverUrl}
+    {#if manga.coverUrl && !coverFailed}
       {#if !coverLoaded}
-        <div class="absolute inset-0 shimmer bg-ink/10 dark:bg-white/10"></div>
+        <Skeleton class="absolute inset-0 rounded-none" />
       {/if}
       <img
+        bind:this={coverElement}
         class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] {coverLoaded ? 'opacity-100' : 'opacity-0'}"
         src={proxiedImageUrl(manga.coverUrl)}
         alt={manga.title}
         loading="lazy"
         on:load={() => (coverLoaded = true)}
+        on:error={() => {
+          coverLoaded = true;
+          coverFailed = true;
+        }}
       />
     {:else}
       <div class="flex h-full items-center justify-center text-ink/40 dark:text-white/40">

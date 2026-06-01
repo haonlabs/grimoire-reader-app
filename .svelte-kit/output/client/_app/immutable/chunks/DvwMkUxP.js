@@ -1,1 +1,0 @@
-import{l as e}from"./C1SaLvbz.js";const a=[{id:"all",name:"All",builtIn:!0},{id:"reading",name:"Reading",builtIn:!0},{id:"completed",name:"Finished",builtIn:!0},{id:"planned",name:"Planned",builtIn:!0},{id:"dropped",name:"Dropped",builtIn:!0}],t=e("manga_library",[]),i=e("manga_categories",a);export{i as c,t as l};

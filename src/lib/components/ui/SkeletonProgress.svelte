@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
+  import Card from '$lib/components/ui/Card.svelte';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
 
   export let label = 'Memuat konten';
   export let value: number | undefined = undefined;
@@ -22,7 +24,7 @@
   });
 </script>
 
-<div class="rounded-lg border border-white/10 bg-black/35 p-3 text-white shadow-soft backdrop-blur">
+<Card class="bg-black/35 p-3 shadow-soft backdrop-blur">
   <div class="mb-2 flex items-center justify-between gap-3 text-xs">
     <span class="font-semibold">{label}</span>
     <span class="tabular-nums text-white/70">{isEstimated ? '~' : ''}{progress}%</span>
@@ -35,6 +37,6 @@
     aria-valuemax="100"
     aria-valuenow={progress}
   >
-    <div class="h-full rounded-full bg-violet-500 transition-[width] duration-300" style={`width: ${progress}%`}></div>
+    <Skeleton class="h-full rounded-full bg-violet-500 transition-[width] duration-300" style={`width: ${progress}%`} />
   </div>
-</div>
+</Card>

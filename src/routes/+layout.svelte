@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { navigating, page } from '$app/stores';
+  import SearchBar from '$lib/components/ui/SearchBar.svelte';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
+  import { settings } from '$lib/stores/settings';
   import {
     Bell,
     Bookmark,
@@ -11,10 +15,7 @@
     Sparkles,
     UserCircle
   } from 'lucide-svelte';
-  import { navigating, page } from '$app/stores';
   import '../app.css';
-  import SearchBar from '$lib/components/ui/SearchBar.svelte';
-  import { settings } from '$lib/stores/settings';
 
   const nav = [
     { href: '/explore', label: 'Home', icon: Home },
@@ -46,7 +47,7 @@
 
 {#if $navigating}
   <div class="fixed inset-x-0 top-0 z-50 h-1 bg-violet-500/15">
-    <div class="h-full w-full shimmer bg-violet-500/50"></div>
+    <Skeleton class="h-full w-full rounded-none bg-violet-500/50" />
   </div>
 {/if}
 
@@ -60,7 +61,7 @@
           <Sparkles size={20} />
         </a>
         <a class="hidden shrink-0 items-center gap-2 sm:flex" href="/explore" aria-label="Home">
-          <span class="text-sm font-extrabold tracking-wide">GRIMOIRE ID</span>
+          <span class="text-sm font-extrabold tracking-wide">GRIMOIRE</span>
         </a>
         {#if isProfile}
           <div class="min-w-0 flex-1">

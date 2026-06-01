@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import {
     ArrowDown,
     ArrowLeft,
@@ -33,6 +33,8 @@
   let autoScrollSpeed = 2;
   let quality = 'high';
   let autoScrollTimer: ReturnType<typeof setInterval> | undefined;
+  let currentChapterLink: HTMLAnchorElement | undefined;
+  let didScrollCurrentChapter = false;
 
   const fits: { value: FitMode; label: string }[] = [
     { value: 'width', label: 'Width' },
@@ -47,13 +49,19 @@
     { value: 'sepia', label: 'Sepia', icon: Monitor }
   ];
 
-  $: sortedChapters = [...chapters].sort((a, b) => Number(a.number) - Number(b.number));
-  $: currentChapterIndex = sortedChapters.findIndex((item) => item.id === chapter.id);
-  $: previousChapter = currentChapterIndex > 0 ? sortedChapters[currentChapterIndex - 1] : undefined;
+  $: navigationChapters = [...chapters].sort((a, b) => Number(a.number) - Number(b.number));
+  $: sortedChapters = [...chapters].sort((a, b) => Number(b.number) - Number(a.number));
+  $: currentChapterIndex = navigationChapters.findIndex((item) => item.id === chapter.id);
+  $: previousChapter = currentChapterIndex > 0 ? navigationChapters[currentChapterIndex - 1] : undefined;
   $: nextChapter =
-    currentChapterIndex >= 0 && currentChapterIndex < sortedChapters.length - 1
-      ? sortedChapters[currentChapterIndex + 1]
+    currentChapterIndex >= 0 && currentChapterIndex < navigationChapters.length - 1
+      ? navigationChapters[currentChapterIndex + 1]
       : undefined;
+  $: if (!chapterListOpen) didScrollCurrentChapter = false;
+  $: if (chapterListOpen && !didScrollCurrentChapter) {
+    didScrollCurrentChapter = true;
+    scrollCurrentChapterIntoView();
+  }
 
   function back() {
     history.back();
@@ -98,6 +106,24 @@
   function updateAutoScrollSpeed(value: number) {
     autoScrollSpeed = value;
     if (autoScroll) startAutoScroll();
+  }
+
+  async function scrollCurrentChapterIntoView() {
+    await tick();
+    currentChapterLink?.scrollIntoView({ block: 'center' });
+  }
+
+  function markCurrentChapter(node: HTMLAnchorElement, isCurrent: boolean) {
+    if (isCurrent) currentChapterLink = node;
+    return {
+      update(nextIsCurrent: boolean) {
+        if (nextIsCurrent) currentChapterLink = node;
+        else if (currentChapterLink === node) currentChapterLink = undefined;
+      },
+      destroy() {
+        if (currentChapterLink === node) currentChapterLink = undefined;
+      }
+    };
   }
 
   onDestroy(stopAutoScroll);
@@ -195,13 +221,14 @@
             <ChevronRight size={20} />
           </a>
         {:else}
-          <a
-            class="focus-ring grid place-items-center rounded-md bg-white/10 p-2 transition hover:bg-white/20"
-            href={`/manga/${sourceId}/${mangaId}`}
-            title="Home"
+          <button
+            class="grid place-items-center rounded-md bg-white/5 p-2 text-white/30"
+            type="button"
+            title="No next chapter"
+            disabled
           >
-            <Home size={20} />
-          </a>
+            <ChevronRight size={20} />
+          </button>
         {/if}
 
         <button
@@ -302,7 +329,7 @@
         <div class="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-semibold">Chapter list</h2>
-            <p class="text-xs text-white/55">{sortedChapters.length} chapters</p>
+            <p class="text-xs text-white/55">{sortedChapters.length} chapters · newest first</p>
           </div>
           <button class="focus-ring rounded-md bg-white/10 p-2" type="button" title="Close chapter list" on:click={() => (chapterListOpen = false)}>
             <X size={18} />
@@ -312,11 +339,13 @@
         <div class="max-h-[60vh] overflow-y-auto pr-1">
           {#each sortedChapters as item}
             <a
-              class="mb-1 flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition {item.id === chapter.id ? 'bg-white text-ink' : 'bg-white/5 text-white/75 hover:bg-white/10'}"
+              use:markCurrentChapter={item.id === chapter.id}
+              class="mb-1 flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition {item.id === chapter.id ? 'bg-white text-ink ring-2 ring-violet-400' : 'bg-white/5 text-white/75 hover:bg-white/10'}"
               href={`/manga/${sourceId}/${mangaId}/${item.id}`}
+              aria-current={item.id === chapter.id ? 'page' : undefined}
             >
               <span class="min-w-0 truncate">Chapter {item.number || '?'}{item.title ? `: ${item.title}` : ''}</span>
-              <span class="shrink-0 text-xs opacity-60">{item.language.toUpperCase()}</span>
+              <span class="shrink-0 text-xs font-semibold opacity-70">{item.id === chapter.id ? 'Current' : item.language.toUpperCase()}</span>
             </a>
           {:else}
             <p class="rounded-md bg-white/5 p-3 text-sm text-white/55">No chapters found.</p>

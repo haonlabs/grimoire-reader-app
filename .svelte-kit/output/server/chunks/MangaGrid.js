@@ -1,22 +1,34 @@
 import { I as fallback, j as attr, k as attr_class, G as escape_html, F as ensure_array_like, n as bind_props } from "./renderer.js";
 import { m as mangaFormatLabel } from "./mangaFormat.js";
 import { p as proxiedImageUrl } from "./image.js";
+import { S as Skeleton } from "./Skeleton.js";
 import { B as Book_open } from "./book-open.js";
 import { S as Star } from "./star.js";
 function MangaCard($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
-    let format;
+    let format, coverUrl;
     let manga = $$props["manga"];
     let compact = fallback($$props["compact"], false);
+    let coverLoaded = false;
+    let coverFailed = false;
+    let lastCoverUrl = "";
     format = mangaFormatLabel(manga);
+    coverUrl = manga.coverUrl ?? "";
+    if (coverUrl !== lastCoverUrl) {
+      lastCoverUrl = coverUrl;
+      coverLoaded = false;
+      coverFailed = false;
+    }
     $$renderer2.push(`<a class="group block overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft dark:border-white/10 dark:bg-[#141416]"${attr("href", `/manga/${manga.sourceId}/${manga.id}`)}><div class="relative aspect-[2/3] bg-ink/10 dark:bg-white/10">`);
-    if (manga.coverUrl) {
+    if (manga.coverUrl && !coverFailed) {
       $$renderer2.push("<!--[0-->");
-      {
+      if (!coverLoaded) {
         $$renderer2.push("<!--[0-->");
-        $$renderer2.push(`<div class="absolute inset-0 shimmer bg-ink/10 dark:bg-white/10"></div>`);
+        Skeleton($$renderer2, { class: "absolute inset-0 rounded-none" });
+      } else {
+        $$renderer2.push("<!--[-1-->");
       }
-      $$renderer2.push(`<!--]--> <img${attr_class(`h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] ${"opacity-0"}`)}${attr("src", proxiedImageUrl(manga.coverUrl))}${attr("alt", manga.title)} loading="lazy"/>`);
+      $$renderer2.push(`<!--]--> <img${attr_class(`h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] ${coverLoaded ? "opacity-100" : "opacity-0"}`)}${attr("src", proxiedImageUrl(manga.coverUrl))}${attr("alt", manga.title)} loading="lazy"/>`);
     } else {
       $$renderer2.push("<!--[-1-->");
       $$renderer2.push(`<div class="flex h-full items-center justify-center text-ink/40 dark:text-white/40">`);

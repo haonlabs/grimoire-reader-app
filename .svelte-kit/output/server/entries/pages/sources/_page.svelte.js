@@ -1,6 +1,9 @@
-import { a7 as sanitize_props, af as spread_props, ad as slot, ah as store_get, k as attr_class, G as escape_html, j as attr, F as ensure_array_like, al as unsubscribe_stores, n as bind_props } from "../../../chunks/renderer.js";
+import { a7 as sanitize_props, af as spread_props, ad as slot, ah as store_get, al as unsubscribe_stores, n as bind_props, G as escape_html, F as ensure_array_like, j as attr } from "../../../chunks/renderer.js";
+import { B as Button } from "../../../chunks/Button.js";
+import { C as Card } from "../../../chunks/Card.js";
+import { S as Search, I as Input } from "../../../chunks/Input.js";
+import { S as Select } from "../../../chunks/Select.js";
 import { s as settings, e as enabledSources } from "../../../chunks/settings.js";
-import { S as Search } from "../../../chunks/search.js";
 import { C as Circle_check } from "../../../chunks/circle-check.js";
 import { I as Icon } from "../../../chunks/Icon.js";
 import { S as Star } from "../../../chunks/star.js";
@@ -108,145 +111,259 @@ function _page($$renderer, $$props) {
     matchingSources = data.sources.filter((source) => {
       const haystack = `${source.name} ${source.id} ${source.description} ${source.language}`.toLowerCase();
       const matchesText = haystack.includes(query.trim().toLowerCase());
-      const matchesLanguage = language === "all";
-      const matchesRating = rating === "all";
-      const matchesParser = parser === "all";
+      const matchesLanguage = language === "all" || source.language === language;
+      const matchesRating = rating === "all" || source.contentRating === rating;
+      const matchesParser = parser === "all" || parser === "ready" && source.parserKind === "native" || parser === "generic" && source.parserKind === "generic" || parser === "pending" && source.isImplemented === false;
       const matchesTab = tab === "all";
       return matchesText && matchesLanguage && matchesRating && matchesParser && matchesTab;
     });
     visible = matchingSources.slice(0, 150);
-    $$renderer2.push(`<section class="mb-5 rounded-lg border border-white/10 bg-[#101012] p-4"><p class="text-sm font-semibold uppercase tracking-wide text-violet-300">Source Manager</p> <h1 class="mt-1 text-3xl font-extrabold text-white">Sources</h1> <p class="mt-1 text-sm text-white/55">Cari source seperti Kotatsu, add/remove dari katalog, lalu jadikan parser aktif sebagai default.</p> <div class="mt-4 grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-black/20 p-1"><button${attr_class(`focus-ring rounded-md px-3 py-2 text-sm font-semibold ${"bg-violet-600 text-white"}`)} type="button">All ${escape_html(data.sources.length)}</button> <button${attr_class(`focus-ring rounded-md px-3 py-2 text-sm font-semibold ${"text-white/60"}`)} type="button">Added ${escape_html(addedCount)}</button> <button${attr_class(`focus-ring rounded-md px-3 py-2 text-sm font-semibold ${"text-white/60"}`)} type="button">Available ${escape_html(availableCount)}</button></div> <div class="mt-4 flex flex-col gap-3 md:flex-row"><label class="relative flex-1">`);
-    Search($$renderer2, {
-      class: "absolute left-3 top-1/2 -translate-y-1/2 text-white/45",
-      size: 17
-    });
-    $$renderer2.push(`<!----> <input class="focus-ring h-11 w-full rounded-lg border border-white/10 bg-white/10 pl-9 pr-3 text-sm text-white placeholder:text-white/40"${attr("value", query)} placeholder="Search source"/></label> `);
-    $$renderer2.select(
-      {
-        class: "focus-ring h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white",
-        value: language
-      },
-      ($$renderer3) => {
-        $$renderer3.push(`<!--[-->`);
-        const each_array = ensure_array_like(languages);
-        for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
-          let value = each_array[$$index];
-          $$renderer3.option({ class: "bg-ink", value }, ($$renderer4) => {
-            $$renderer4.push(`${escape_html(value === "all" ? "All languages" : value)}`);
+    let $$settled = true;
+    let $$inner_renderer;
+    function $$render_inner($$renderer3) {
+      Card($$renderer3, {
+        class: "mb-5 p-4",
+        children: ($$renderer4) => {
+          $$renderer4.push(`<p class="text-sm font-semibold uppercase tracking-wide text-violet-300">Source Manager</p> <h1 class="mt-1 text-3xl font-extrabold text-white">Sources</h1> <p class="mt-1 text-sm text-white/55">Cari source seperti Kotatsu, add/remove dari katalog, lalu jadikan parser aktif sebagai default.</p> <div class="mt-4 grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-black/20 p-1">`);
+          Button($$renderer4, {
+            variant: "default",
+            class: "border-0",
+            children: ($$renderer5) => {
+              $$renderer5.push(`<!---->All ${escape_html(data.sources.length)}`);
+            },
+            $$slots: { default: true }
+          });
+          $$renderer4.push(`<!----> `);
+          Button($$renderer4, {
+            variant: "ghost",
+            class: "border-0",
+            children: ($$renderer5) => {
+              $$renderer5.push(`<!---->Added ${escape_html(addedCount)}`);
+            },
+            $$slots: { default: true }
+          });
+          $$renderer4.push(`<!----> `);
+          Button($$renderer4, {
+            variant: "ghost",
+            class: "border-0",
+            children: ($$renderer5) => {
+              $$renderer5.push(`<!---->Available ${escape_html(availableCount)}`);
+            },
+            $$slots: { default: true }
+          });
+          $$renderer4.push(`<!----></div> <div class="mt-4 flex flex-col gap-3 md:flex-row"><label class="relative flex-1">`);
+          Search($$renderer4, {
+            class: "absolute left-3 top-1/2 -translate-y-1/2 text-white/45",
+            size: 17
+          });
+          $$renderer4.push(`<!----> `);
+          Input($$renderer4, {
+            class: "h-11 pl-9",
+            placeholder: "Search source",
+            get value() {
+              return query;
+            },
+            set value($$value) {
+              query = $$value;
+              $$settled = false;
+            }
+          });
+          $$renderer4.push(`<!----></label> `);
+          Select($$renderer4, {
+            class: "h-11",
+            get value() {
+              return language;
+            },
+            set value($$value) {
+              language = $$value;
+              $$settled = false;
+            },
+            children: ($$renderer5) => {
+              $$renderer5.push(`<!--[-->`);
+              const each_array = ensure_array_like(languages);
+              for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
+                let value = each_array[$$index];
+                $$renderer5.option({ class: "bg-ink", value }, ($$renderer6) => {
+                  $$renderer6.push(`${escape_html(value === "all" ? "All languages" : value)}`);
+                });
+              }
+              $$renderer5.push(`<!--]-->`);
+            },
+            $$slots: { default: true }
+          });
+          $$renderer4.push(`<!----> `);
+          Select($$renderer4, {
+            class: "h-11",
+            get value() {
+              return rating;
+            },
+            set value($$value) {
+              rating = $$value;
+              $$settled = false;
+            },
+            children: ($$renderer5) => {
+              $$renderer5.option({ class: "bg-ink", value: "all" }, ($$renderer6) => {
+                $$renderer6.push(`All ratings`);
+              });
+              $$renderer5.push(` `);
+              $$renderer5.option({ class: "bg-ink", value: "safe" }, ($$renderer6) => {
+                $$renderer6.push(`Safe`);
+              });
+              $$renderer5.push(` `);
+              $$renderer5.option({ class: "bg-ink", value: "suggestive" }, ($$renderer6) => {
+                $$renderer6.push(`Suggestive`);
+              });
+              $$renderer5.push(` `);
+              $$renderer5.option({ class: "bg-ink", value: "explicit" }, ($$renderer6) => {
+                $$renderer6.push(`Explicit`);
+              });
+            },
+            $$slots: { default: true }
+          });
+          $$renderer4.push(`<!----> `);
+          Select($$renderer4, {
+            class: "h-11",
+            get value() {
+              return parser;
+            },
+            set value($$value) {
+              parser = $$value;
+              $$settled = false;
+            },
+            children: ($$renderer5) => {
+              $$renderer5.option({ class: "bg-ink", value: "all" }, ($$renderer6) => {
+                $$renderer6.push(`All parsers`);
+              });
+              $$renderer5.push(` `);
+              $$renderer5.option({ class: "bg-ink", value: "ready" }, ($$renderer6) => {
+                $$renderer6.push(`Native`);
+              });
+              $$renderer5.push(` `);
+              $$renderer5.option({ class: "bg-ink", value: "generic" }, ($$renderer6) => {
+                $$renderer6.push(`Generic`);
+              });
+              $$renderer5.push(` `);
+              $$renderer5.option({ class: "bg-ink", value: "pending" }, ($$renderer6) => {
+                $$renderer6.push(`Catalog only`);
+              });
+            },
+            $$slots: { default: true }
+          });
+          $$renderer4.push(`<!----></div> <p class="mt-3 text-xs text-white/45">Menampilkan ${escape_html(visible.length)} dari ${escape_html(matchingSources.length)} source cocok.</p>`);
+        },
+        $$slots: { default: true }
+      });
+      $$renderer3.push(`<!----> <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">`);
+      const each_array_1 = ensure_array_like(visible);
+      if (each_array_1.length !== 0) {
+        $$renderer3.push("<!--[-->");
+        for (let $$index_1 = 0, $$length = each_array_1.length; $$index_1 < $$length; $$index_1++) {
+          let source = each_array_1[$$index_1];
+          Card($$renderer3, {
+            class: "p-4",
+            children: ($$renderer4) => {
+              $$renderer4.push(`<div class="flex items-start justify-between gap-3"><div class="flex gap-3"><span class="grid h-11 w-11 place-items-center rounded-lg bg-white text-sm font-bold text-ink">${escape_html(source.icon)}</span> <div><h2 class="font-semibold text-white">${escape_html(source.name)}</h2> <p class="text-xs text-white/55">${escape_html(source.method)} · ${escape_html(source.language)} · ${escape_html(source.contentRating)}</p> `);
+              if (activeSource === source.id) {
+                $$renderer4.push("<!--[0-->");
+                $$renderer4.push(`<span class="mt-2 inline-flex rounded-full bg-violet-500/15 px-2 py-1 text-[11px] font-semibold text-violet-200">Default</span>`);
+              } else if (source.isImplemented === false) {
+                $$renderer4.push("<!--[1-->");
+                $$renderer4.push(`<span class="mt-2 inline-flex rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white/55">Catalog only</span>`);
+              } else if (source.parserKind === "generic") {
+                $$renderer4.push("<!--[2-->");
+                $$renderer4.push(`<span class="mt-2 inline-flex rounded-full bg-sky-500/15 px-2 py-1 text-[11px] font-semibold text-sky-200">Generic</span>`);
+              } else {
+                $$renderer4.push("<!--[-1-->");
+                $$renderer4.push(`<span class="mt-2 inline-flex rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-200">Native</span>`);
+              }
+              $$renderer4.push(`<!--]--></div></div> `);
+              Button($$renderer4, {
+                class: `h-auto rounded-full border-0 p-1 ${store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id) ? "text-violet-300" : "text-white/35"}`,
+                variant: "ghost",
+                title: store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id) ? "Remove source" : "Add source",
+                children: ($$renderer5) => {
+                  if (store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id)) {
+                    $$renderer5.push("<!--[0-->");
+                    Circle_check($$renderer5, { size: 22 });
+                  } else {
+                    $$renderer5.push("<!--[-1-->");
+                    Circle_off($$renderer5, { size: 22 });
+                  }
+                  $$renderer5.push(`<!--]-->`);
+                },
+                $$slots: { default: true }
+              });
+              $$renderer4.push(`<!----></div> <p class="mt-3 line-clamp-2 text-sm leading-6 text-white/65">${escape_html(source.description)}</p> `);
+              if (source.baseUrl) {
+                $$renderer4.push("<!--[0-->");
+                $$renderer4.push(`<a class="mt-3 block max-w-full truncate text-sm font-medium text-violet-300"${attr("href", source.baseUrl)} target="_blank" rel="noreferrer"${attr("title", source.baseUrl)}>${escape_html(source.baseUrl)}</a>`);
+              } else {
+                $$renderer4.push("<!--[-1-->");
+                $$renderer4.push(`<p class="mt-3 text-sm font-medium text-white/40">Domain belum terdeteksi</p>`);
+              }
+              $$renderer4.push(`<!--]--> <p class="mt-3 line-clamp-2 text-xs capitalize leading-5 text-white/50">Status: ${escape_html(source.health?.status ?? "unknown")}${escape_html(source.health?.message ? ` · ${source.health.message}` : "")}</p> <div class="mt-4 grid grid-cols-2 gap-2">`);
+              Button($$renderer4, {
+                variant: store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id) ? "secondary" : "default",
+                children: ($$renderer5) => {
+                  if (store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id)) {
+                    $$renderer5.push("<!--[0-->");
+                    Circle_off($$renderer5, { size: 16 });
+                    $$renderer5.push(`<!----> Remove`);
+                  } else {
+                    $$renderer5.push("<!--[-1-->");
+                    Circle_check($$renderer5, { size: 16 });
+                    $$renderer5.push(`<!----> Add`);
+                  }
+                  $$renderer5.push(`<!--]-->`);
+                },
+                $$slots: { default: true }
+              });
+              $$renderer4.push(`<!----> `);
+              Button($$renderer4, {
+                variant: activeSource === source.id ? "outline" : "secondary",
+                class: activeSource === source.id ? "bg-white text-ink hover:bg-white/90" : "",
+                disabled: source.isImplemented === false,
+                children: ($$renderer5) => {
+                  if (activeSource === source.id) {
+                    $$renderer5.push("<!--[0-->");
+                    Star($$renderer5, { size: 16, class: "fill-current" });
+                    $$renderer5.push(`<!----> Default`);
+                  } else if (source.isImplemented === false) {
+                    $$renderer5.push("<!--[1-->");
+                    Star_off($$renderer5, { size: 16 });
+                    $$renderer5.push(`<!----> Pending`);
+                  } else {
+                    $$renderer5.push("<!--[-1-->");
+                    Star_off($$renderer5, { size: 16 });
+                    $$renderer5.push(`<!----> Set Default`);
+                  }
+                  $$renderer5.push(`<!--]-->`);
+                },
+                $$slots: { default: true }
+              });
+              $$renderer4.push(`<!----></div>`);
+            },
+            $$slots: { default: true }
           });
         }
-        $$renderer3.push(`<!--]-->`);
-      }
-    );
-    $$renderer2.push(` `);
-    $$renderer2.select(
-      {
-        class: "focus-ring h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white",
-        value: rating
-      },
-      ($$renderer3) => {
-        $$renderer3.option({ class: "bg-ink", value: "all" }, ($$renderer4) => {
-          $$renderer4.push(`All ratings`);
-        });
-        $$renderer3.option({ class: "bg-ink", value: "safe" }, ($$renderer4) => {
-          $$renderer4.push(`Safe`);
-        });
-        $$renderer3.option({ class: "bg-ink", value: "suggestive" }, ($$renderer4) => {
-          $$renderer4.push(`Suggestive`);
-        });
-        $$renderer3.option({ class: "bg-ink", value: "explicit" }, ($$renderer4) => {
-          $$renderer4.push(`Explicit`);
+      } else {
+        $$renderer3.push("<!--[!-->");
+        Card($$renderer3, {
+          class: "p-5 text-sm text-white/55 md:col-span-2 xl:col-span-3",
+          children: ($$renderer4) => {
+            $$renderer4.push(`<!---->Tidak ada source yang cocok dengan pencarian ini.`);
+          },
+          $$slots: { default: true }
         });
       }
-    );
-    $$renderer2.push(` `);
-    $$renderer2.select(
-      {
-        class: "focus-ring h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white",
-        value: parser
-      },
-      ($$renderer3) => {
-        $$renderer3.option({ class: "bg-ink", value: "all" }, ($$renderer4) => {
-          $$renderer4.push(`All parsers`);
-        });
-        $$renderer3.option({ class: "bg-ink", value: "ready" }, ($$renderer4) => {
-          $$renderer4.push(`Native`);
-        });
-        $$renderer3.option({ class: "bg-ink", value: "generic" }, ($$renderer4) => {
-          $$renderer4.push(`Generic`);
-        });
-        $$renderer3.option({ class: "bg-ink", value: "pending" }, ($$renderer4) => {
-          $$renderer4.push(`Catalog only`);
-        });
-      }
-    );
-    $$renderer2.push(`</div> <p class="mt-3 text-xs text-white/45">Menampilkan ${escape_html(visible.length)} dari ${escape_html(matchingSources.length)} source cocok.</p></section> <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">`);
-    const each_array_1 = ensure_array_like(visible);
-    if (each_array_1.length !== 0) {
-      $$renderer2.push("<!--[-->");
-      for (let $$index_1 = 0, $$length = each_array_1.length; $$index_1 < $$length; $$index_1++) {
-        let source = each_array_1[$$index_1];
-        $$renderer2.push(`<article class="rounded-lg border border-white/10 bg-[#101012] p-4 shadow-sm"><div class="flex items-start justify-between gap-3"><div class="flex gap-3"><span class="grid h-11 w-11 place-items-center rounded-lg bg-white text-sm font-bold text-ink">${escape_html(source.icon)}</span> <div><h2 class="font-semibold text-white">${escape_html(source.name)}</h2> <p class="text-xs text-white/55">${escape_html(source.method)} · ${escape_html(source.language)} · ${escape_html(source.contentRating)}</p> `);
-        if (activeSource === source.id) {
-          $$renderer2.push("<!--[0-->");
-          $$renderer2.push(`<span class="mt-2 inline-flex rounded-full bg-violet-500/15 px-2 py-1 text-[11px] font-semibold text-violet-200">Default</span>`);
-        } else if (source.isImplemented === false) {
-          $$renderer2.push("<!--[1-->");
-          $$renderer2.push(`<span class="mt-2 inline-flex rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white/55">Catalog only</span>`);
-        } else if (source.parserKind === "generic") {
-          $$renderer2.push("<!--[2-->");
-          $$renderer2.push(`<span class="mt-2 inline-flex rounded-full bg-sky-500/15 px-2 py-1 text-[11px] font-semibold text-sky-200">Generic</span>`);
-        } else {
-          $$renderer2.push("<!--[-1-->");
-          $$renderer2.push(`<span class="mt-2 inline-flex rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-200">Native</span>`);
-        }
-        $$renderer2.push(`<!--]--></div></div> <button${attr_class(`focus-ring rounded-full p-1 ${store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id) ? "text-violet-300" : "text-white/35"}`)} type="button"${attr("title", store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id) ? "Remove source" : "Add source")}>`);
-        if (store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id)) {
-          $$renderer2.push("<!--[0-->");
-          Circle_check($$renderer2, { size: 22 });
-        } else {
-          $$renderer2.push("<!--[-1-->");
-          Circle_off($$renderer2, { size: 22 });
-        }
-        $$renderer2.push(`<!--]--></button></div> <p class="mt-3 line-clamp-2 text-sm leading-6 text-white/65">${escape_html(source.description)}</p> `);
-        if (source.baseUrl) {
-          $$renderer2.push("<!--[0-->");
-          $$renderer2.push(`<a class="mt-3 block max-w-full truncate text-sm font-medium text-violet-300"${attr("href", source.baseUrl)} target="_blank" rel="noreferrer"${attr("title", source.baseUrl)}>${escape_html(source.baseUrl)}</a>`);
-        } else {
-          $$renderer2.push("<!--[-1-->");
-          $$renderer2.push(`<p class="mt-3 text-sm font-medium text-white/40">Domain belum terdeteksi</p>`);
-        }
-        $$renderer2.push(`<!--]--> <p class="mt-3 line-clamp-2 text-xs capitalize leading-5 text-white/50">Status: ${escape_html(source.health?.status ?? "unknown")}${escape_html(source.health?.message ? ` · ${source.health.message}` : "")}</p> <div class="mt-4 grid grid-cols-2 gap-2"><button${attr_class(`focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold ${store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id) ? "bg-white/10 text-white" : "bg-violet-600 text-white"}`)} type="button">`);
-        if (store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id)) {
-          $$renderer2.push("<!--[0-->");
-          Circle_off($$renderer2, { size: 16 });
-          $$renderer2.push(`<!----> Remove`);
-        } else {
-          $$renderer2.push("<!--[-1-->");
-          Circle_check($$renderer2, { size: 16 });
-          $$renderer2.push(`<!----> Add`);
-        }
-        $$renderer2.push(`<!--]--></button> <button${attr_class(`focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${activeSource === source.id ? "bg-white text-ink" : "bg-white/10 text-white"}`)} type="button"${attr("disabled", source.isImplemented === false, true)}>`);
-        if (activeSource === source.id) {
-          $$renderer2.push("<!--[0-->");
-          Star($$renderer2, { size: 16, class: "fill-current" });
-          $$renderer2.push(`<!----> Default`);
-        } else if (source.isImplemented === false) {
-          $$renderer2.push("<!--[1-->");
-          Star_off($$renderer2, { size: 16 });
-          $$renderer2.push(`<!----> Pending`);
-        } else {
-          $$renderer2.push("<!--[-1-->");
-          Star_off($$renderer2, { size: 16 });
-          $$renderer2.push(`<!----> Set Default`);
-        }
-        $$renderer2.push(`<!--]--></button></div></article>`);
-      }
-    } else {
-      $$renderer2.push("<!--[!-->");
-      $$renderer2.push(`<div class="rounded-lg border border-white/10 bg-[#101012] p-5 text-sm text-white/55 md:col-span-2 xl:col-span-3">Tidak ada source yang cocok dengan pencarian ini.</div>`);
+      $$renderer3.push(`<!--]--></div>`);
     }
-    $$renderer2.push(`<!--]--></div>`);
+    do {
+      $$settled = true;
+      $$inner_renderer = $$renderer2.copy();
+      $$render_inner($$inner_renderer);
+    } while (!$$settled);
+    $$renderer2.subsume($$inner_renderer);
     if ($$store_subs) unsubscribe_stores($$store_subs);
     bind_props($$props, { data });
   });

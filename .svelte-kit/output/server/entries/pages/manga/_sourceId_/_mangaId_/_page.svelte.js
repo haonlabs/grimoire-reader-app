@@ -1,10 +1,11 @@
 import { a7 as sanitize_props, af as spread_props, ad as slot, I as fallback, F as ensure_array_like, j as attr, G as escape_html, n as bind_props, ah as store_get, Q as head, k as attr_class, al as unsubscribe_stores } from "../../../../../chunks/renderer.js";
 import { p as proxiedImageUrl } from "../../../../../chunks/image.js";
-import { C as Circle_check } from "../../../../../chunks/circle-check.js";
 import { P as Play } from "../../../../../chunks/play.js";
+import { C as Circle_check } from "../../../../../chunks/circle-check.js";
+import { S as Skeleton } from "../../../../../chunks/Skeleton.js";
 import { m as mangaFormatLabel } from "../../../../../chunks/mangaFormat.js";
-import { P as Plus, l as library } from "../../../../../chunks/library.js";
-import { r as readChapters } from "../../../../../chunks/history.js";
+import { l as library } from "../../../../../chunks/library.js";
+import { a as readerPositions, r as readChapters } from "../../../../../chunks/history.js";
 import { B as Book_open } from "../../../../../chunks/book-open.js";
 import { I as Icon } from "../../../../../chunks/Icon.js";
 import { B as Bookmark } from "../../../../../chunks/bookmark.js";
@@ -146,6 +147,7 @@ function ChapterList($$renderer, $$props) {
     let readMap = fallback($$props["readMap"], () => ({}), true);
     let sort = fallback($$props["sort"], "newest");
     let coverUrl = fallback($$props["coverUrl"], "");
+    let failedImages = {};
     function relativeDate(value) {
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return "";
@@ -161,12 +163,14 @@ function ChapterList($$renderer, $$props) {
     for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
       let chapter = each_array[$$index];
       $$renderer2.push(`<a class="flex items-center gap-3 p-3 transition hover:bg-white/10"${attr("href", `/manga/${sourceId}/${mangaId}/${chapter.id}`)}><div class="h-16 w-12 shrink-0 overflow-hidden rounded-md bg-white/10">`);
-      if (chapter.thumbnailUrl || coverUrl) {
+      if ((chapter.thumbnailUrl || coverUrl) && !failedImages[chapter.id]) {
         $$renderer2.push("<!--[0-->");
         $$renderer2.push(`<img class="h-full w-full object-cover"${attr("src", proxiedImageUrl(chapter.thumbnailUrl || coverUrl))} alt="" loading="lazy"/>`);
       } else {
         $$renderer2.push("<!--[-1-->");
-        $$renderer2.push(`<div class="h-full w-full shimmer bg-white/10"></div>`);
+        $$renderer2.push(`<div class="grid h-full w-full place-items-center text-white/35">`);
+        Play($$renderer2, { size: 16 });
+        $$renderer2.push(`<!----></div>`);
       }
       $$renderer2.push(`<!--]--></div> <div class="min-w-0 flex-1"><p class="font-semibold text-white">Chapter ${escape_html(chapter.number || "?")}</p> `);
       if (chapter.title) {
@@ -192,15 +196,27 @@ function ChapterList($$renderer, $$props) {
 function _page($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     var $$store_subs;
-    let inLibrary, firstChapter, ratingLabel, description, formatLabel;
+    let inLibrary, firstChapter, lastReaderPosition, lastChapterId, continueChapter, ratingLabel, description, formatLabel, coverUrl;
     let data = $$props["data"];
     let sort = "newest";
+    let coverLoaded = false;
+    let coverFailed = false;
+    let lastCoverUrl = "";
     let activeTab = "Chapters";
     inLibrary = Boolean(data.manga && store_get($$store_subs ??= {}, "$library", library).some((entry) => entry.manga.id === data.manga?.id && entry.manga.sourceId === data.manga?.sourceId));
     firstChapter = [...data.chapters].sort((a, b) => a.number - b.number)[0];
+    lastReaderPosition = Object.entries(store_get($$store_subs ??= {}, "$readerPositions", readerPositions)).filter(([key]) => key.startsWith(`${data.sourceId}:${data.mangaId}:`)).sort(([, a], [, b]) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+    lastChapterId = lastReaderPosition?.[0].split(":").at(-1);
+    continueChapter = data.chapters.find((chapter) => chapter.id === lastChapterId) ?? data.chapters.find((chapter) => store_get($$store_subs ??= {}, "$readChapters", readChapters)[chapter.id] !== void 0) ?? firstChapter;
     ratingLabel = data.manga?.rating ? data.manga.rating.toFixed(1) : "-";
     description = data.manga?.description ?? "";
     formatLabel = data.manga ? mangaFormatLabel(data.manga) : "Manga";
+    coverUrl = data.manga?.coverUrl ?? "";
+    if (coverUrl !== lastCoverUrl) {
+      lastCoverUrl = coverUrl;
+      coverLoaded = false;
+      coverFailed = false;
+    }
     head("1gok44w", $$renderer2, ($$renderer3) => {
       $$renderer3.title(($$renderer4) => {
         $$renderer4.push(`<title>${escape_html(data.manga?.title ?? "Manga")} · Grimoire Reader</title>`);
@@ -212,23 +228,25 @@ function _page($$renderer, $$props) {
     } else {
       $$renderer2.push("<!--[-1-->");
       $$renderer2.push(`<section class="grid gap-6 lg:grid-cols-[18rem_1fr]"><div class="mx-auto w-52 sm:w-64 lg:sticky lg:top-24 lg:w-full lg:self-start"><div class="relative overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-soft">`);
-      if (data.manga.coverUrl) {
+      if (data.manga.coverUrl && !coverFailed) {
         $$renderer2.push("<!--[0-->");
-        {
+        if (!coverLoaded) {
           $$renderer2.push("<!--[0-->");
-          $$renderer2.push(`<div class="absolute inset-0 shimmer bg-white/10"></div>`);
+          Skeleton($$renderer2, { class: "absolute inset-0 rounded-none" });
+        } else {
+          $$renderer2.push("<!--[-1-->");
         }
-        $$renderer2.push(`<!--]--> <img${attr_class(`aspect-[2/3] w-full object-cover transition-opacity duration-200 ${"opacity-0"}`)}${attr("src", proxiedImageUrl(data.manga.coverUrl))}${attr("alt", data.manga.title)}/>`);
+        $$renderer2.push(`<!--]--> <img${attr_class(`aspect-[2/3] w-full object-cover transition-opacity duration-200 ${coverLoaded ? "opacity-100" : "opacity-0"}`)}${attr("src", proxiedImageUrl(data.manga.coverUrl))}${attr("alt", data.manga.title)}/>`);
       } else {
         $$renderer2.push("<!--[-1-->");
-        $$renderer2.push(`<div class="aspect-[2/3] shimmer bg-white/10"></div>`);
+        $$renderer2.push(`<div class="grid aspect-[2/3] place-items-center bg-white/10 text-sm text-white/45">No cover</div>`);
       }
-      $$renderer2.push(`<!--]--> <span class="absolute left-3 top-3 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-soft">${escape_html(formatLabel)}</span></div></div> <div class="min-w-0"><p class="text-sm font-semibold uppercase tracking-wide text-violet-300">${escape_html(data.sourceId)}</p> <h1 class="mt-1 text-3xl font-extrabold leading-tight text-white md:text-4xl">${escape_html(data.manga.title)}</h1> <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">`);
-      if (firstChapter) {
+      $$renderer2.push(`<!--]--> <span class="absolute left-3 top-3 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-soft">${escape_html(formatLabel)}</span></div></div> <div class="min-w-0"><p class="text-sm font-semibold uppercase tracking-wide text-violet-300">${escape_html(data.sourceId)}</p> <h1 class="mt-1 text-3xl font-extrabold leading-tight text-white md:text-4xl">${escape_html(data.manga.title)}</h1> <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">`);
+      if (continueChapter) {
         $$renderer2.push("<!--[0-->");
-        $$renderer2.push(`<a class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white"${attr("href", `/manga/${data.sourceId}/${data.mangaId}/${firstChapter.id}`)}>`);
+        $$renderer2.push(`<a class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white"${attr("href", `/manga/${data.sourceId}/${data.mangaId}/${continueChapter.id}`)}>`);
         Book_open($$renderer2, { size: 17 });
-        $$renderer2.push(`<!----> Baca</a>`);
+        $$renderer2.push(`<!----> ${escape_html(lastChapterId ? "Lanjutkan" : "Baca")}</a>`);
       } else {
         $$renderer2.push("<!--[-1-->");
       }
@@ -242,9 +260,7 @@ function _page($$renderer, $$props) {
         Bookmark($$renderer2, { size: 17 });
         $$renderer2.push(`<!----> Bookmark`);
       }
-      $$renderer2.push(`<!--]--></button> <button class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#141416] px-4 py-3 text-sm font-semibold text-white" type="button">`);
-      Plus($$renderer2, { size: 17 });
-      $$renderer2.push(`<!----> Tambah ke Readlist</button></div> <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"><div class="rounded-lg border border-white/10 bg-[#101012] p-3"><div class="flex items-center gap-2 text-gold">`);
+      $$renderer2.push(`<!--]--></button></div> <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"><div class="rounded-lg border border-white/10 bg-[#101012] p-3"><div class="flex items-center gap-2 text-gold">`);
       Star($$renderer2, { size: 17, class: "fill-gold" });
       $$renderer2.push(`<!----><span class="font-bold">${escape_html(ratingLabel)}</span></div> <p class="mt-1 text-xs text-white/45">Rating</p></div> <div class="rounded-lg border border-white/10 bg-[#101012] p-3"><div class="flex items-center gap-2 text-white">`);
       Bookmark($$renderer2, { size: 17 });

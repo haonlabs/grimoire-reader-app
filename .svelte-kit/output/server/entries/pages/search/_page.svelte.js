@@ -2,6 +2,8 @@ import { I as fallback, F as ensure_array_like, n as bind_props, ah as store_get
 import { p as page } from "../../../chunks/stores.js";
 import { M as MangaGrid } from "../../../chunks/MangaGrid.js";
 import { S as SkeletonProgress } from "../../../chunks/SkeletonProgress.js";
+import { C as Card } from "../../../chunks/Card.js";
+import { S as Skeleton } from "../../../chunks/Skeleton.js";
 import { e as enabledSources, s as settings } from "../../../chunks/settings.js";
 import { S as Sliders_horizontal } from "../../../chunks/sliders-horizontal.js";
 function MangaGridSkeleton($$renderer, $$props) {
@@ -17,7 +19,22 @@ function MangaGridSkeleton($$renderer, $$props) {
     const each_array = ensure_array_like(Array(count));
     for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
       each_array[$$index];
-      $$renderer.push(`<div class="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm dark:border-white/10 dark:bg-white/5"><div class="aspect-[2/3] shimmer bg-ink/10 dark:bg-white/10"></div> <div class="space-y-2 p-3"><div class="h-4 w-11/12 rounded shimmer bg-ink/10 dark:bg-white/10"></div> <div class="h-4 w-2/3 rounded shimmer bg-ink/10 dark:bg-white/10"></div> <div class="flex gap-2 pt-1"><div class="h-5 w-16 rounded shimmer bg-ink/10 dark:bg-white/10"></div> <div class="h-5 w-12 rounded shimmer bg-ink/10 dark:bg-white/10"></div></div></div></div>`);
+      Card($$renderer, {
+        class: "overflow-hidden border-ink/10 bg-white dark:border-white/10 dark:bg-white/5",
+        children: ($$renderer2) => {
+          Skeleton($$renderer2, { class: "aspect-[2/3] rounded-none" });
+          $$renderer2.push(`<!----> <div class="space-y-2 p-3">`);
+          Skeleton($$renderer2, { class: "h-4 w-11/12" });
+          $$renderer2.push(`<!----> `);
+          Skeleton($$renderer2, { class: "h-4 w-2/3" });
+          $$renderer2.push(`<!----> <div class="flex gap-2 pt-1">`);
+          Skeleton($$renderer2, { class: "h-5 w-16" });
+          $$renderer2.push(`<!----> `);
+          Skeleton($$renderer2, { class: "h-5 w-12" });
+          $$renderer2.push(`<!----></div></div>`);
+        },
+        $$slots: { default: true }
+      });
     }
     $$renderer.push(`<!--]--></div>`);
   } else {
@@ -26,7 +43,22 @@ function MangaGridSkeleton($$renderer, $$props) {
     const each_array_1 = ensure_array_like(Array(Math.min(count, 6)));
     for (let $$index_1 = 0, $$length = each_array_1.length; $$index_1 < $$length; $$index_1++) {
       each_array_1[$$index_1];
-      $$renderer.push(`<div class="flex gap-3 rounded-lg border border-ink/10 bg-white p-3 dark:border-white/10 dark:bg-white/5"><div class="h-28 w-20 shrink-0 rounded shimmer bg-ink/10 dark:bg-white/10"></div> <div class="min-w-0 flex-1 space-y-3 py-1"><div class="h-4 w-3/4 rounded shimmer bg-ink/10 dark:bg-white/10"></div> <div class="h-3 w-full rounded shimmer bg-ink/10 dark:bg-white/10"></div> <div class="h-3 w-5/6 rounded shimmer bg-ink/10 dark:bg-white/10"></div> <div class="h-5 w-24 rounded shimmer bg-ink/10 dark:bg-white/10"></div></div></div>`);
+      Card($$renderer, {
+        class: "flex gap-3 border-ink/10 bg-white p-3 dark:border-white/10 dark:bg-white/5",
+        children: ($$renderer2) => {
+          Skeleton($$renderer2, { class: "h-28 w-20 shrink-0" });
+          $$renderer2.push(`<!----> <div class="min-w-0 flex-1 space-y-3 py-1">`);
+          Skeleton($$renderer2, { class: "h-4 w-3/4" });
+          $$renderer2.push(`<!----> `);
+          Skeleton($$renderer2, { class: "h-3 w-full" });
+          $$renderer2.push(`<!----> `);
+          Skeleton($$renderer2, { class: "h-3 w-5/6" });
+          $$renderer2.push(`<!----> `);
+          Skeleton($$renderer2, { class: "h-5 w-24" });
+          $$renderer2.push(`<!----></div>`);
+        },
+        $$slots: { default: true }
+      });
     }
     $$renderer.push(`<!--]--></div>`);
   }
@@ -74,7 +106,7 @@ function _page($$renderer, $$props) {
       $$renderer2.push(`<section><div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-semibold text-white">${escape_html(sourceMeta.name)}</h2> `);
       if (loading[sourceMeta.id]) {
         $$renderer2.push("<!--[0-->");
-        $$renderer2.push(`<span class="h-4 w-24 rounded shimmer bg-white/10" aria-label="Loading"></span>`);
+        Skeleton($$renderer2, { class: "h-4 w-24", "aria-label": "Loading" });
       } else {
         $$renderer2.push("<!--[-1-->");
       }

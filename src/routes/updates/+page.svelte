@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { RefreshCw } from 'lucide-svelte';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import { library } from '$lib/stores/library';
   import type { Chapter, Manga } from '$lib/sources/types';
 
@@ -54,8 +55,8 @@
       <div class="grid gap-3 p-4" aria-label="Checking library updates">
         {#each Array(4) as _}
           <div class="space-y-2 rounded-lg border border-white/10 p-3">
-            <div class="h-4 w-2/3 rounded shimmer bg-white/10"></div>
-            <div class="h-3 w-1/2 rounded shimmer bg-white/10"></div>
+            <Skeleton class="h-4 w-2/3" />
+            <Skeleton class="h-3 w-1/2" />
           </div>
         {/each}
       </div>

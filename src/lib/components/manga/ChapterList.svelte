@@ -9,6 +9,7 @@
   export let readMap: Record<string, number> = {};
   export let sort: 'newest' | 'oldest' = 'newest';
   export let coverUrl = '';
+  let failedImages: Record<string, true> = {};
 
   $: sorted = [...chapters].sort((a, b) =>
     sort === 'newest'
@@ -34,10 +35,18 @@
       href={`/manga/${sourceId}/${mangaId}/${chapter.id}`}
     >
       <div class="h-16 w-12 shrink-0 overflow-hidden rounded-md bg-white/10">
-        {#if chapter.thumbnailUrl || coverUrl}
-          <img class="h-full w-full object-cover" src={proxiedImageUrl(chapter.thumbnailUrl || coverUrl)} alt="" loading="lazy" />
+        {#if (chapter.thumbnailUrl || coverUrl) && !failedImages[chapter.id]}
+          <img
+            class="h-full w-full object-cover"
+            src={proxiedImageUrl(chapter.thumbnailUrl || coverUrl)}
+            alt=""
+            loading="lazy"
+            on:error={() => (failedImages = { ...failedImages, [chapter.id]: true })}
+          />
         {:else}
-          <div class="h-full w-full shimmer bg-white/10"></div>
+          <div class="grid h-full w-full place-items-center text-white/35">
+            <Play size={16} />
+          </div>
         {/if}
       </div>
       <div class="min-w-0 flex-1">

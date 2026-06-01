@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { Bookmark, BookOpen, Check, Eye, Plus, RotateCcw, Star, Trophy } from 'lucide-svelte';
+  import { tick } from 'svelte';
+  import { Bookmark, BookOpen, Check, Eye, RotateCcw, Star, Trophy } from 'lucide-svelte';
   import ChapterList from '$lib/components/manga/ChapterList.svelte';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import type { Chapter, MangaDetail } from '$lib/sources/types';
   import { proxiedImageUrl } from '$lib/utils/image';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
   import { library } from '$lib/stores/library';
-  import { readChapters } from '$lib/stores/history';
+  import { readChapters, readerPositions } from '$lib/stores/history';
 
   export let data: {
     sourceId: string;
@@ -17,15 +19,34 @@
 
   let sort: 'newest' | 'oldest' = 'newest';
   let coverLoaded = false;
+  let coverFailed = false;
+  let coverElement: HTMLImageElement | undefined;
+  let lastCoverUrl = '';
+  let coverCheckQueued = false;
   let activeTab: 'Chapters' | 'Info' | 'Novel' = 'Chapters';
   let descriptionOpen = false;
   $: inLibrary = Boolean(
     data.manga && $library.some((entry) => entry.manga.id === data.manga?.id && entry.manga.sourceId === data.manga?.sourceId)
   );
   $: firstChapter = [...data.chapters].sort((a, b) => a.number - b.number)[0];
+  $: lastReaderPosition = Object.entries($readerPositions)
+    .filter(([key]) => key.startsWith(`${data.sourceId}:${data.mangaId}:`))
+    .sort(([, a], [, b]) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+  $: lastChapterId = lastReaderPosition?.[0].split(':').at(-1);
+  $: continueChapter =
+    data.chapters.find((chapter) => chapter.id === lastChapterId) ??
+    data.chapters.find((chapter) => $readChapters[chapter.id] !== undefined) ??
+    firstChapter;
   $: ratingLabel = data.manga?.rating ? data.manga.rating.toFixed(1) : '-';
   $: description = data.manga?.description ?? '';
   $: formatLabel = data.manga ? mangaFormatLabel(data.manga) : 'Manga';
+  $: coverUrl = data.manga?.coverUrl ?? '';
+  $: if (coverUrl !== lastCoverUrl) {
+    lastCoverUrl = coverUrl;
+    coverLoaded = false;
+    coverFailed = false;
+  }
+  $: if (coverElement && coverUrl && !coverLoaded && !coverFailed) checkCachedCover();
 
   function addToLibrary() {
     if (!data.manga || inLibrary) return;
@@ -42,6 +63,17 @@
   function setActiveTab(tab: string) {
     if (tab === 'Chapters' || tab === 'Info' || tab === 'Novel') activeTab = tab;
   }
+
+  async function checkCachedCover() {
+    if (coverCheckQueued) return;
+    coverCheckQueued = true;
+    await tick();
+    coverCheckQueued = false;
+    if (!coverElement || coverLoaded || coverFailed) return;
+    if (!coverElement.complete) return;
+    if (coverElement.naturalWidth > 0) coverLoaded = true;
+    else coverFailed = true;
+  }
 </script>
 
 <svelte:head>
@@ -57,18 +89,23 @@
   <section class="grid gap-6 lg:grid-cols-[18rem_1fr]">
     <div class="mx-auto w-52 sm:w-64 lg:sticky lg:top-24 lg:w-full lg:self-start">
       <div class="relative overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-soft">
-        {#if data.manga.coverUrl}
+        {#if data.manga.coverUrl && !coverFailed}
           {#if !coverLoaded}
-            <div class="absolute inset-0 shimmer bg-white/10"></div>
+            <Skeleton class="absolute inset-0 rounded-none" />
           {/if}
           <img
+            bind:this={coverElement}
             class="aspect-[2/3] w-full object-cover transition-opacity duration-200 {coverLoaded ? 'opacity-100' : 'opacity-0'}"
             src={proxiedImageUrl(data.manga.coverUrl)}
             alt={data.manga.title}
             on:load={() => (coverLoaded = true)}
+            on:error={() => {
+              coverLoaded = true;
+              coverFailed = true;
+            }}
           />
         {:else}
-          <div class="aspect-[2/3] shimmer bg-white/10"></div>
+          <div class="grid aspect-[2/3] place-items-center bg-white/10 text-sm text-white/45">No cover</div>
         {/if}
         <span class="absolute left-3 top-3 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-soft">
           {formatLabel}
@@ -80,14 +117,14 @@
       <p class="text-sm font-semibold uppercase tracking-wide text-violet-300">{data.sourceId}</p>
       <h1 class="mt-1 text-3xl font-extrabold leading-tight text-white md:text-4xl">{data.manga.title}</h1>
 
-      <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {#if firstChapter}
+      <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {#if continueChapter}
           <a
             class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white"
-            href={`/manga/${data.sourceId}/${data.mangaId}/${firstChapter.id}`}
+            href={`/manga/${data.sourceId}/${data.mangaId}/${continueChapter.id}`}
           >
             <BookOpen size={17} />
-            Baca
+            {lastChapterId ? 'Lanjutkan' : 'Baca'}
           </a>
         {/if}
         <button
@@ -96,14 +133,6 @@
           on:click={addToLibrary}
         >
           {#if inLibrary}<Check size={17} /> Bookmark{:else}<Bookmark size={17} /> Bookmark{/if}
-        </button>
-        <button
-          class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#141416] px-4 py-3 text-sm font-semibold text-white"
-          type="button"
-          on:click={addToLibrary}
-        >
-          <Plus size={17} />
-          Tambah ke Readlist
         </button>
       </div>
 

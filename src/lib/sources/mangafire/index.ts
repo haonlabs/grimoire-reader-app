@@ -16,6 +16,9 @@ const SITE_BASE = 'https://mangafire.to';
 const PAGE_LIMIT = 30;
 const REQUEST_TIMEOUT = 15_000;
 const LANGUAGE = 'en';
+const USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36';
+const mangaFireCookies = new Map<string, string>();
 
 interface MangaFireAjax<T> {
   result?: T;
@@ -23,6 +26,15 @@ interface MangaFireAjax<T> {
 
 interface MangaFireImages {
   images: Array<[string, unknown, number?]>;
+}
+
+interface MangaFireChapterPayload {
+  html?: string;
+}
+
+interface MangaFireChapterRef {
+  url: string;
+  dataId?: string;
 }
 
 function encodeId(value: string) {
@@ -35,6 +47,21 @@ function decodeId(value: string) {
   } catch {
     return value;
   }
+}
+
+function encodeChapterRef(ref: MangaFireChapterRef) {
+  return encodeId(JSON.stringify(ref));
+}
+
+function decodeChapterRef(value: string): MangaFireChapterRef {
+  const decoded = decodeId(value);
+  try {
+    const parsed = JSON.parse(decoded) as MangaFireChapterRef;
+    if (parsed && typeof parsed.url === 'string') return parsed;
+  } catch {
+    // Older saved MangaFire chapters stored the reader URL directly.
+  }
+  return { url: decoded };
 }
 
 function clean(text?: string) {
@@ -70,18 +97,42 @@ function sortFrom(filters?: FilterInput[]) {
   return 'recently_updated';
 }
 
+function splitSetCookieHeader(header: string | null) {
+  return header?.split(/,(?=\s*[^;,]+=)/).map((part) => part.trim()).filter(Boolean) ?? [];
+}
+
+function rememberCookies(headers: Headers) {
+  const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+  const setCookies = typeof getSetCookie === 'function' ? getSetCookie.call(headers) : splitSetCookieHeader(headers.get('set-cookie'));
+  for (const cookie of setCookies) {
+    const pair = cookie.split(';', 1)[0];
+    const index = pair.indexOf('=');
+    if (index > 0) mangaFireCookies.set(pair.slice(0, index), pair.slice(index + 1));
+  }
+}
+
+function cookieHeader() {
+  return [...mangaFireCookies].map(([name, value]) => `${name}=${value}`).join('; ');
+}
+
 async function fetchText(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
+    const cookies = cookieHeader();
+    const isAjax = url.includes('/ajax/');
     const response = await fetch(url, {
       headers: {
-        Accept: 'text/html,application/xhtml+xml,application/json',
+        Accept: isAjax ? 'application/json, text/javascript, */*; q=0.01' : 'text/html,application/xhtml+xml,application/json',
+        Origin: SITE_BASE,
         Referer: `${SITE_BASE}/`,
-        'User-Agent': 'GrimoireReader/0.1'
+        'User-Agent': USER_AGENT,
+        ...(isAjax ? { 'X-Requested-With': 'XMLHttpRequest' } : {}),
+        ...(cookies ? { Cookie: cookies } : {})
       },
       signal: controller.signal
     });
+    rememberCookies(response.headers);
     if (!response.ok) {
       throw Object.assign(new Error(`MangaFire returned HTTP ${response.status}`), {
         status: response.status,
@@ -111,6 +162,10 @@ async function fetchJson<T>(url: string) {
       code: 'SOURCE_PARSE_FAILED'
     });
   }
+}
+
+function ajaxHtml(result: string | MangaFireChapterPayload | undefined) {
+  return typeof result === 'string' ? result : (result?.html ?? '');
 }
 
 function cardToManga($: cheerio.CheerioAPI, element: AnyNode): Manga | null {
@@ -187,31 +242,65 @@ export class MangaFireSource implements MangaSource {
 
   async getChapters(mangaId: string): Promise<Chapter[]> {
     const mangaUrl = decodeId(mangaId);
-    const $ = cheerio.load(await fetchText(mangaUrl));
+    const mangaKey = fireIdFromMangaUrl(mangaUrl);
+    const detailHtml = await fetchText(mangaUrl);
+    const listVrf = generateVrf(`${mangaKey}@chapter@${LANGUAGE}`);
+    let listResponse: MangaFireAjax<MangaFireChapterPayload>;
+    try {
+      listResponse = await fetchJson<MangaFireAjax<MangaFireChapterPayload>>(
+        `${SITE_BASE}/ajax/read/${mangaKey}/chapter/${LANGUAGE}?vrf=${encodeURIComponent(listVrf)}`
+      );
+    } catch {
+      return this.parseStaticChapters(detailHtml, mangaId);
+    }
+    const $list = cheerio.load(ajaxHtml(listResponse.result));
+    const anchors = $list('ul li a').toArray();
+    if (!anchors.length) return this.parseStaticChapters(detailHtml, mangaId);
 
-    return $('.m-list .tab-content[data-name="chapter"] .list-body ul li')
-      .map((_, element) => {
-        const node = $(element);
-        const link = node.find('a').first();
-        const number = numberFrom(node.attr('data-number'));
-        const title = clean(link.attr('title')) || clean(link.find('span').first().text()) || `Chapter ${number}`;
+    let metaAnchors: AnyNode[] = [];
+    try {
+      const metaResponse = await fetchJson<MangaFireAjax<string>>(
+        `${SITE_BASE}/ajax/manga/${mangaKey}/chapter/${LANGUAGE}`
+      );
+      metaAnchors = cheerio.load(ajaxHtml(metaResponse.result))('ul li a').toArray();
+    } catch {
+      metaAnchors = [];
+    }
+
+    return anchors
+      .map((element, index) => {
+        const link = $list(element);
+        const meta = metaAnchors[index] ? $list(metaAnchors[index]) : undefined;
+        const dataId = link.attr('data-id') ?? '';
+        const number = numberFrom(link.attr('data-number'));
+        const url = absoluteUrl(SITE_BASE, link.attr('href'));
+        const title =
+          clean(meta?.attr('title')) ||
+          clean(link.attr('title')) ||
+          clean(link.find('span').first().text()) ||
+          `Chapter ${number}`;
         return {
-          id: encodeId(absoluteUrl(SITE_BASE, link.attr('href'))),
+          id: encodeChapterRef({ url, dataId }),
           mangaId,
           sourceId: this.id,
           number,
           title,
           language: LANGUAGE,
-          uploadedAt: clean(link.find('span').last().text()) || new Date().toISOString(),
-          url: absoluteUrl(SITE_BASE, link.attr('href'))
+          uploadedAt: clean(meta?.find('span').eq(1).text()) || clean(link.find('span').last().text()) || new Date().toISOString(),
+          url
         };
       })
-      .get()
+      .filter((chapter) => chapter.url && chapter.id)
       .sort((left, right) => right.number - left.number);
   }
 
   async getPages(chapterId: string): Promise<string[]> {
-    const chapterUrl = decodeId(chapterId);
+    const chapter = decodeChapterRef(chapterId);
+    const chapterUrl = chapter.url;
+    if (chapter.dataId) {
+      return this.getReaderImages(chapter.dataId);
+    }
+
     const html = await fetchText(chapterUrl);
     const $ = cheerio.load(html);
     const directImages = $('img.chapter-page, #page-wrapper img, .page-reader img')
@@ -226,9 +315,13 @@ export class MangaFireSource implements MangaSource {
       $('body').attr('data-disqus-id')?.replace(/^mangafire-/, '') ??
       chapterUrl.split('/').pop() ??
       chapterUrl;
-    const vrf = generateVrf(`chapter@${dataId}`);
+    return this.getReaderImages(dataId);
+  }
+
+  private async getReaderImages(chapterDataId: string) {
+    const vrf = generateVrf(`chapter@${chapterDataId}`);
     const response = await fetchJson<MangaFireAjax<MangaFireImages>>(
-      `${SITE_BASE}/ajax/read/chapter/${dataId}?vrf=${encodeURIComponent(vrf)}`
+      `${SITE_BASE}/ajax/read/chapter/${chapterDataId}?vrf=${encodeURIComponent(vrf)}`
     );
 
     return (response.result?.images ?? [])
@@ -250,6 +343,30 @@ export class MangaFireSource implements MangaSource {
         ]
       }
     ];
+  }
+
+  private parseStaticChapters(html: string, mangaId: string) {
+    const $ = cheerio.load(html);
+    return $('.m-list .tab-content[data-name="chapter"] .list-body ul li')
+      .map((_, element) => {
+        const node = $(element);
+        const link = node.find('a').first();
+        const number = numberFrom(node.attr('data-number'));
+        const url = absoluteUrl(SITE_BASE, link.attr('href'));
+        const title = clean(link.attr('title')) || clean(link.find('span').first().text()) || `Chapter ${number}`;
+        return {
+          id: encodeChapterRef({ url }),
+          mangaId,
+          sourceId: this.id,
+          number,
+          title,
+          language: LANGUAGE,
+          uploadedAt: clean(link.find('span').last().text()) || new Date().toISOString(),
+          url
+        };
+      })
+      .get()
+      .sort((left, right) => right.number - left.number);
   }
 
   private parseList(html: string) {

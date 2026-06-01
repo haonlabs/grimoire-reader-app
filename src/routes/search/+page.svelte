@@ -4,6 +4,7 @@
   import { page as pageStore } from '$app/stores';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
   import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import type { MangaListResult, SourceMetadata } from '$lib/sources/types';
   import { enabledSources, settings } from '$lib/stores/settings';
 
@@ -92,7 +93,7 @@
     <section>
       <div class="mb-3 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-white">{sourceMeta.name}</h2>
-        {#if loading[sourceMeta.id]}<span class="h-4 w-24 rounded shimmer bg-white/10" aria-label="Loading"></span>{/if}
+        {#if loading[sourceMeta.id]}<Skeleton class="h-4 w-24" aria-label="Loading" />{/if}
       </div>
       {#if errors[sourceMeta.id]}
         <div class="rounded-lg border border-ember/30 bg-ember/10 p-4 text-sm text-ember">

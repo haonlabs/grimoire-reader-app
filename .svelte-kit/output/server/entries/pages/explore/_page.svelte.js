@@ -1,5 +1,10 @@
-import { a7 as sanitize_props, af as spread_props, ad as slot, I as fallback, k as attr_class, n as bind_props, ah as store_get, al as unsubscribe_stores, j as attr, G as escape_html, F as ensure_array_like } from "../../../chunks/renderer.js";
+import { a7 as sanitize_props, af as spread_props, ad as slot, I as fallback, n as bind_props, ah as store_get, al as unsubscribe_stores, j as attr, G as escape_html, F as ensure_array_like } from "../../../chunks/renderer.js";
+import { o as onDestroy } from "../../../chunks/index-server.js";
 import { M as MangaGrid } from "../../../chunks/MangaGrid.js";
+import { C as Card } from "../../../chunks/Card.js";
+import { S as Skeleton } from "../../../chunks/Skeleton.js";
+import { B as Button } from "../../../chunks/Button.js";
+import { S as Select } from "../../../chunks/Select.js";
 import { I as Icon } from "../../../chunks/Icon.js";
 import { L as List, C as Chevron_right } from "../../../chunks/list.js";
 import { R as Rotate_ccw } from "../../../chunks/rotate-ccw.js";
@@ -88,55 +93,104 @@ function FilterPanel($$renderer, $$props) {
   let view = fallback($$props["view"], "grid");
   let sort = fallback($$props["sort"], "updated");
   let status = fallback($$props["status"], "all");
-  $$renderer.push(`<div class="flex flex-wrap items-end gap-3"><label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">Sort `);
-  $$renderer.select(
-    {
-      class: "focus-ring rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm normal-case text-white",
-      value: sort
-    },
-    ($$renderer2) => {
-      $$renderer2.option({ class: "bg-ink", value: "updated" }, ($$renderer3) => {
-        $$renderer3.push(`Latest`);
-      });
-      $$renderer2.option({ class: "bg-ink", value: "newest" }, ($$renderer3) => {
-        $$renderer3.push(`Newest added`);
-      });
-      $$renderer2.option({ class: "bg-ink", value: "popular" }, ($$renderer3) => {
-        $$renderer3.push(`Popular`);
-      });
-      $$renderer2.option({ class: "bg-ink", value: "rating" }, ($$renderer3) => {
-        $$renderer3.push(`Rating`);
-      });
-    }
-  );
-  $$renderer.push(`</label> <label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">Status `);
-  $$renderer.select(
-    {
-      class: "focus-ring rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm normal-case text-white",
-      value: status
-    },
-    ($$renderer2) => {
-      $$renderer2.option({ class: "bg-ink", value: "all" }, ($$renderer3) => {
-        $$renderer3.push(`All`);
-      });
-      $$renderer2.option({ class: "bg-ink", value: "ongoing" }, ($$renderer3) => {
-        $$renderer3.push(`Ongoing`);
-      });
-      $$renderer2.option({ class: "bg-ink", value: "completed" }, ($$renderer3) => {
-        $$renderer3.push(`Completed`);
-      });
-      $$renderer2.option({ class: "bg-ink", value: "hiatus" }, ($$renderer3) => {
-        $$renderer3.push(`Hiatus`);
-      });
-    }
-  );
-  $$renderer.push(`</label> <div class="flex rounded-lg border border-white/10 bg-white/10 p-1"><button${attr_class(`focus-ring rounded-md p-2 ${view === "grid" ? "bg-violet-600 text-white" : "text-white/60"}`)} type="button" title="Grid view">`);
-  Grid_2x2($$renderer, { size: 18 });
-  $$renderer.push(`<!----></button> <button${attr_class(`focus-ring rounded-md p-2 ${view === "list" ? "bg-violet-600 text-white" : "text-white/60"}`)} type="button" title="List view">`);
-  List($$renderer, { size: 18 });
-  $$renderer.push(`<!----></button></div> <button class="focus-ring inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white/70" type="button">`);
-  Rotate_ccw($$renderer, { size: 16 });
-  $$renderer.push(`<!----> Retry</button></div>`);
+  let $$settled = true;
+  let $$inner_renderer;
+  function $$render_inner($$renderer2) {
+    $$renderer2.push(`<div class="flex flex-wrap items-end gap-3"><label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">Sort `);
+    Select($$renderer2, {
+      get value() {
+        return sort;
+      },
+      set value($$value) {
+        sort = $$value;
+        $$settled = false;
+      },
+      children: ($$renderer3) => {
+        $$renderer3.option({ class: "bg-ink", value: "updated" }, ($$renderer4) => {
+          $$renderer4.push(`Latest`);
+        });
+        $$renderer3.push(` `);
+        $$renderer3.option({ class: "bg-ink", value: "newest" }, ($$renderer4) => {
+          $$renderer4.push(`Newest added`);
+        });
+        $$renderer3.push(` `);
+        $$renderer3.option({ class: "bg-ink", value: "popular" }, ($$renderer4) => {
+          $$renderer4.push(`Popular`);
+        });
+        $$renderer3.push(` `);
+        $$renderer3.option({ class: "bg-ink", value: "rating" }, ($$renderer4) => {
+          $$renderer4.push(`Rating`);
+        });
+      },
+      $$slots: { default: true }
+    });
+    $$renderer2.push(`<!----></label> <label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">Status `);
+    Select($$renderer2, {
+      get value() {
+        return status;
+      },
+      set value($$value) {
+        status = $$value;
+        $$settled = false;
+      },
+      children: ($$renderer3) => {
+        $$renderer3.option({ class: "bg-ink", value: "all" }, ($$renderer4) => {
+          $$renderer4.push(`All`);
+        });
+        $$renderer3.push(` `);
+        $$renderer3.option({ class: "bg-ink", value: "ongoing" }, ($$renderer4) => {
+          $$renderer4.push(`Ongoing`);
+        });
+        $$renderer3.push(` `);
+        $$renderer3.option({ class: "bg-ink", value: "completed" }, ($$renderer4) => {
+          $$renderer4.push(`Completed`);
+        });
+        $$renderer3.push(` `);
+        $$renderer3.option({ class: "bg-ink", value: "hiatus" }, ($$renderer4) => {
+          $$renderer4.push(`Hiatus`);
+        });
+      },
+      $$slots: { default: true }
+    });
+    $$renderer2.push(`<!----></label> <div class="flex rounded-lg border border-white/10 bg-white/10 p-1">`);
+    Button($$renderer2, {
+      variant: view === "grid" ? "default" : "ghost",
+      size: "icon",
+      class: "h-9 w-9 border-0",
+      title: "Grid view",
+      children: ($$renderer3) => {
+        Grid_2x2($$renderer3, { size: 18 });
+      },
+      $$slots: { default: true }
+    });
+    $$renderer2.push(`<!----> `);
+    Button($$renderer2, {
+      variant: view === "list" ? "default" : "ghost",
+      size: "icon",
+      class: "h-9 w-9 border-0",
+      title: "List view",
+      children: ($$renderer3) => {
+        List($$renderer3, { size: 18 });
+      },
+      $$slots: { default: true }
+    });
+    $$renderer2.push(`<!----></div> `);
+    Button($$renderer2, {
+      variant: "secondary",
+      children: ($$renderer3) => {
+        Rotate_ccw($$renderer3, { size: 16 });
+        $$renderer3.push(`<!----> Retry`);
+      },
+      $$slots: { default: true }
+    });
+    $$renderer2.push(`<!----></div>`);
+  }
+  do {
+    $$settled = true;
+    $$inner_renderer = $$renderer.copy();
+    $$render_inner($$inner_renderer);
+  } while (!$$settled);
+  $$renderer.subsume($$inner_renderer);
   bind_props($$props, { view, sort, status });
 }
 function _page($$renderer, $$props) {
@@ -150,6 +204,9 @@ function _page($$renderer, $$props) {
     let status = "all";
     let formatTab = "Manhwa";
     let updateTab = "Project";
+    onDestroy(() => {
+      return;
+    });
     sources = (data.sources ?? []).filter((source) => source.isImplemented !== false && store_get($$store_subs ??= {}, "$enabledSources", enabledSources).includes(source.id));
     sourceId = sources.some((source) => source.id === store_get($$store_subs ??= {}, "$settings", settings).defaultSourceId) ? store_get($$store_subs ??= {}, "$settings", settings).defaultSourceId : sources[0]?.id ?? "shinigami";
     sourceName = sources.find((source) => source.id === sourceId)?.name ?? sourceId;
@@ -167,62 +224,76 @@ function _page($$renderer, $$props) {
         $$renderer3.push(`<img class="absolute inset-0 h-full w-full object-cover opacity-55 transition duration-500 group-hover:scale-[1.03]"${attr("src", proxiedImageUrl(hero.coverUrl))}${attr("alt", hero.title)}/>`);
       } else {
         $$renderer3.push("<!--[-1-->");
-        $$renderer3.push(`<div class="absolute inset-0 shimmer bg-white/10"></div>`);
+        Skeleton($$renderer3, { class: "absolute inset-0 rounded-none" });
       }
       $$renderer3.push(`<!--]--> <div class="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/15"></div> <div class="relative flex min-h-[18rem] max-w-2xl flex-col justify-end p-5 sm:p-7"><p class="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-300">${escape_html(sourceName)}</p> <h1 class="line-clamp-2 text-3xl font-extrabold leading-tight text-white sm:text-4xl">${escape_html(hero?.title ?? "GRIMOIRE ID")}</h1> <p class="mt-3 line-clamp-3 text-sm leading-6 text-white/70">${escape_html(hero?.description ?? "Baca manhwa, manga, dan manhua dengan tampilan clean seperti Shinigami.")}</p> <div class="mt-5 inline-flex w-fit items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white">Baca `);
       Chevron_right($$renderer3, { size: 17 });
       $$renderer3.push(`<!----></div></div></a> <section class="rounded-lg border border-white/10 bg-[#141416] p-4"><div class="mb-3 flex items-center gap-2">`);
       Megaphone($$renderer3, { size: 18, class: "text-violet-300" });
-      $$renderer3.push(`<!----> <h2 class="text-base font-semibold text-white">Pengumuman</h2></div> <div class="space-y-3 text-sm leading-6 text-white/65"><p>Source aktif: ${escape_html(sourceName)}</p> <p>Reading mode dibuat scrolling clean, menu muncul saat area baca di-tap.</p> <p>Library, history, dan setting tetap tersimpan lokal di browser ini.</p></div></section></section> <section class="mb-5 flex flex-col gap-3 rounded-lg border border-white/10 bg-[#101012] p-4 lg:flex-row lg:items-end lg:justify-between"><label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">Source `);
-      $$renderer3.select(
-        {
-          class: "focus-ring rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm normal-case text-white",
-          value: sourceId
+      $$renderer3.push(`<!----> <h2 class="text-base font-semibold text-white">Pengumuman</h2></div> <div class="space-y-3 text-sm leading-6 text-white/65"><p>Source aktif: ${escape_html(sourceName)}</p> <p>Reading mode dibuat scrolling clean, menu muncul saat area baca di-tap.</p> <p>Library, history, dan setting tetap tersimpan lokal di browser ini.</p></div></section></section> `);
+      Card($$renderer3, {
+        class: "mb-5 flex flex-col gap-3 p-4 lg:flex-row lg:items-end lg:justify-between",
+        children: ($$renderer4) => {
+          $$renderer4.push(`<label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">Source `);
+          Select($$renderer4, {
+            value: sourceId,
+            children: ($$renderer5) => {
+              $$renderer5.push(`<!--[-->`);
+              const each_array = ensure_array_like(sources);
+              for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
+                let source = each_array[$$index];
+                $$renderer5.option({ class: "bg-ink", value: source.id }, ($$renderer6) => {
+                  $$renderer6.push(`${escape_html(source.name)}`);
+                });
+              }
+              $$renderer5.push(`<!--]-->`);
+            },
+            $$slots: { default: true }
+          });
+          $$renderer4.push(`<!----></label> `);
+          FilterPanel($$renderer4, {
+            get view() {
+              return view;
+            },
+            set view($$value) {
+              view = $$value;
+              $$settled = false;
+            },
+            get sort() {
+              return sort;
+            },
+            set sort($$value) {
+              sort = $$value;
+              $$settled = false;
+            },
+            get status() {
+              return status;
+            },
+            set status($$value) {
+              status = $$value;
+              $$settled = false;
+            }
+          });
+          $$renderer4.push(`<!---->`);
         },
-        ($$renderer4) => {
-          $$renderer4.push(`<!--[-->`);
-          const each_array = ensure_array_like(sources);
-          for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
-            let source = each_array[$$index];
-            $$renderer4.option({ class: "bg-ink", value: source.id }, ($$renderer5) => {
-              $$renderer5.push(`${escape_html(source.name)}`);
-            });
-          }
-          $$renderer4.push(`<!--]-->`);
-        }
-      );
-      $$renderer3.push(`</label> `);
-      FilterPanel($$renderer3, {
-        get view() {
-          return view;
-        },
-        set view($$value) {
-          view = $$value;
-          $$settled = false;
-        },
-        get sort() {
-          return sort;
-        },
-        set sort($$value) {
-          sort = $$value;
-          $$settled = false;
-        },
-        get status() {
-          return status;
-        },
-        set status($$value) {
-          status = $$value;
-          $$settled = false;
-        }
+        $$slots: { default: true }
       });
-      $$renderer3.push(`<!----></section> `);
+      $$renderer3.push(`<!----> `);
       if (recommended.length) {
         $$renderer3.push("<!--[0-->");
         $$renderer3.push(`<section class="mb-8"><div class="mb-3 flex flex-wrap items-center justify-between gap-3"><h2 class="text-xl font-bold text-white">Rekomendasi</h2> <div class="flex rounded-lg border border-white/10 bg-[#141416] p-1"><!--[-->`);
         const each_array_1 = ensure_array_like(["Manhwa", "Manga", "Manhua"]);
         for (let $$index_1 = 0, $$length = each_array_1.length; $$index_1 < $$length; $$index_1++) {
           let tab = each_array_1[$$index_1];
-          $$renderer3.push(`<button${attr_class(`focus-ring rounded-md px-3 py-1.5 text-sm font-medium ${formatTab === tab ? "bg-violet-600 text-white" : "text-white/60"}`)} type="button">${escape_html(tab)}</button>`);
+          Button($$renderer3, {
+            variant: formatTab === tab ? "default" : "ghost",
+            size: "sm",
+            class: "border-0",
+            children: ($$renderer4) => {
+              $$renderer4.push(`<!---->${escape_html(tab)}`);
+            },
+            $$slots: { default: true }
+          });
         }
         $$renderer3.push(`<!--]--></div></div> <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"><!--[-->`);
         const each_array_2 = ensure_array_like(recommended);
@@ -234,7 +305,7 @@ function _page($$renderer, $$props) {
             $$renderer3.push(`<img class="h-full w-full object-cover transition group-hover:scale-105"${attr("src", proxiedImageUrl(manga.coverUrl))}${attr("alt", manga.title)}/>`);
           } else {
             $$renderer3.push("<!--[-1-->");
-            $$renderer3.push(`<div class="h-full w-full shimmer bg-white/10"></div>`);
+            Skeleton($$renderer3, { class: "h-full w-full rounded-none" });
           }
           $$renderer3.push(`<!--]--> <span class="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white">${escape_html(mangaFormatLabel(manga))}</span> <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3 text-sm font-semibold">${escape_html(manga.title)}</span></a>`);
         }
@@ -251,14 +322,28 @@ function _page($$renderer, $$props) {
           const each_array_4 = ensure_array_like(["Project", "Mirror"]);
           for (let $$index_4 = 0, $$length = each_array_4.length; $$index_4 < $$length; $$index_4++) {
             let tab = each_array_4[$$index_4];
-            $$renderer3.push(`<button${attr_class(`focus-ring rounded-md px-3 py-1.5 text-sm font-medium ${updateTab === tab ? "bg-violet-600 text-white" : "text-white/60"}`)} type="button">${escape_html(tab)}</button>`);
+            Button($$renderer3, {
+              variant: updateTab === tab ? "default" : "ghost",
+              size: "sm",
+              class: "border-0",
+              children: ($$renderer4) => {
+                $$renderer4.push(`<!---->${escape_html(tab)}`);
+              },
+              $$slots: { default: true }
+            });
           }
           $$renderer3.push(`<!--]--></div></div></div> `);
           MangaGrid($$renderer3, { items: updateItems, view });
           $$renderer3.push(`<!----></section>`);
         } else {
           $$renderer3.push("<!--[-1-->");
-          $$renderer3.push(`<div class="rounded-lg border border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">Tidak ada manga yang bisa ditampilkan dari ${escape_html(sourceName)}. Kalau source ini baru ditambahkan, kemungkinan parser-nya belum cocok dengan markup situs atau domainnya sedang tidak bisa diakses dari network ini.</div>`);
+          Card($$renderer3, {
+            class: "border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60",
+            children: ($$renderer4) => {
+              $$renderer4.push(`<!---->Tidak ada manga yang bisa ditampilkan dari ${escape_html(sourceName)}. Kalau source ini baru ditambahkan, kemungkinan parser-nya belum cocok dengan markup situs atau domainnya sedang tidak bisa diakses dari network ini.`);
+            },
+            $$slots: { default: true }
+          });
         }
         $$renderer3.push(`<!--]--> `);
         {

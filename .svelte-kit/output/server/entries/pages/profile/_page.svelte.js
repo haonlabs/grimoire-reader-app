@@ -1,4 +1,5 @@
-import { I as fallback, F as ensure_array_like, G as escape_html, n as bind_props, ah as store_get, Q as head, j as attr, al as unsubscribe_stores } from "../../../chunks/renderer.js";
+import { I as fallback, n as bind_props, F as ensure_array_like, G as escape_html, ah as store_get, Q as head, j as attr, al as unsubscribe_stores } from "../../../chunks/renderer.js";
+import { S as Select } from "../../../chunks/Select.js";
 import { s as settings, e as enabledSources } from "../../../chunks/settings.js";
 import { C as Circle_user, b as Compass, a as Clock, B as Bell } from "../../../chunks/compass.js";
 import { H as House, S as Settings } from "../../../chunks/settings2.js";
@@ -7,25 +8,40 @@ import { S as Sliders_horizontal } from "../../../chunks/sliders-horizontal.js";
 function SourceSelector($$renderer, $$props) {
   let sources = fallback($$props["sources"], () => [], true);
   let selected = fallback($$props["selected"], "mangadex");
-  $$renderer.push(`<label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-ink/55 dark:text-white/55">Source `);
-  $$renderer.select(
-    {
-      class: "focus-ring rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm normal-case text-ink shadow-sm dark:border-white/15 dark:bg-white/10 dark:text-white",
-      value: selected
-    },
-    ($$renderer2) => {
-      $$renderer2.push(`<!--[-->`);
-      const each_array = ensure_array_like(sources);
-      for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
-        let source = each_array[$$index];
-        $$renderer2.option({ value: source.id }, ($$renderer3) => {
-          $$renderer3.push(`${escape_html(source.name)}`);
-        });
-      }
-      $$renderer2.push(`<!--]-->`);
-    }
-  );
-  $$renderer.push(`</label>`);
+  let $$settled = true;
+  let $$inner_renderer;
+  function $$render_inner($$renderer2) {
+    $$renderer2.push(`<label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-ink/55 dark:text-white/55">Source `);
+    Select($$renderer2, {
+      class: "border-ink/15 bg-white text-ink dark:border-white/15 dark:bg-white/10 dark:text-white",
+      get value() {
+        return selected;
+      },
+      set value($$value) {
+        selected = $$value;
+        $$settled = false;
+      },
+      children: ($$renderer3) => {
+        $$renderer3.push(`<!--[-->`);
+        const each_array = ensure_array_like(sources);
+        for (let $$index = 0, $$length = each_array.length; $$index < $$length; $$index++) {
+          let source = each_array[$$index];
+          $$renderer3.option({ value: source.id }, ($$renderer4) => {
+            $$renderer4.push(`${escape_html(source.name)}`);
+          });
+        }
+        $$renderer3.push(`<!--]-->`);
+      },
+      $$slots: { default: true }
+    });
+    $$renderer2.push(`<!----></label>`);
+  }
+  do {
+    $$settled = true;
+    $$inner_renderer = $$renderer.copy();
+    $$render_inner($$inner_renderer);
+  } while (!$$settled);
+  $$renderer.subsume($$inner_renderer);
   bind_props($$props, { sources, selected });
 }
 function _page($$renderer, $$props) {

@@ -1,8 +1,15 @@
-import { a7 as sanitize_props, af as spread_props, ad as slot, I as fallback, j as attr, k as attr_class, G as escape_html, n as bind_props, ai as stringify, ah as store_get, Q as head, F as ensure_array_like, al as unsubscribe_stores } from "../../../../../../chunks/renderer.js";
-import { r as readChapters, h as history } from "../../../../../../chunks/history.js";
+import { a7 as sanitize_props, af as spread_props, ad as slot, I as fallback, k as attr_class, j as attr, G as escape_html, n as bind_props, ai as stringify, ah as store_get, Q as head, F as ensure_array_like, al as unsubscribe_stores } from "../../../../../../chunks/renderer.js";
+import { o as onDestroy } from "../../../../../../chunks/index-server.js";
+import "@sveltejs/kit/internal";
+import "../../../../../../chunks/exports.js";
+import "../../../../../../chunks/utils.js";
+import "@sveltejs/kit/internal/server";
+import "../../../../../../chunks/root.js";
+import "../../../../../../chunks/state.svelte.js";
 import { s as settings } from "../../../../../../chunks/settings.js";
 import { p as proxiedImageUrl } from "../../../../../../chunks/image.js";
-import { S as SkeletonProgress, o as onDestroy } from "../../../../../../chunks/SkeletonProgress.js";
+import { S as Skeleton } from "../../../../../../chunks/Skeleton.js";
+import { S as SkeletonProgress } from "../../../../../../chunks/SkeletonProgress.js";
 import { I as Icon } from "../../../../../../chunks/Icon.js";
 import { H as House, S as Settings } from "../../../../../../chunks/settings2.js";
 import { L as List, C as Chevron_right } from "../../../../../../chunks/list.js";
@@ -211,10 +218,15 @@ function PageImage($$renderer, $$props) {
       loaded = false;
       failed = false;
     }
-    $$renderer2.push(`<div class="relative flex min-h-64 w-full items-center justify-center">`);
+    $$renderer2.push(`<div${attr_class(`relative flex w-full items-center justify-center ${!loaded && !failed ? "min-h-[72vh]" : "min-h-0"}`)}${attr("data-reader-page", index)}>`);
     if (!loaded && !failed) {
       $$renderer2.push("<!--[0-->");
-      $$renderer2.push(`<div class="relative my-1 h-[72vh] w-full max-w-4xl overflow-hidden rounded-sm bg-white/10"><div class="absolute inset-0 shimmer"${attr("aria-label", `Loading page ${index + 1}`)}></div> <div class="absolute left-1/2 top-1/2 w-[min(24rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">`);
+      $$renderer2.push(`<div class="relative my-1 h-[72vh] w-full max-w-4xl overflow-hidden rounded-sm bg-white/10">`);
+      Skeleton($$renderer2, {
+        class: "absolute inset-0 rounded-sm",
+        "aria-label": `Loading page ${index + 1}`
+      });
+      $$renderer2.push(`<!----> <div class="absolute left-1/2 top-1/2 w-[min(24rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">`);
       SkeletonProgress($$renderer2, { label: "Memuat halaman", value: progress });
       $$renderer2.push(`<!----></div></div>`);
     } else {
@@ -233,7 +245,7 @@ function PageImage($$renderer, $$props) {
 }
 function ReaderOverlay($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
-    let sortedChapters, currentChapterIndex, previousChapter, nextChapter;
+    let navigationChapters, currentChapterIndex, previousChapter, nextChapter;
     let visible = fallback($$props["visible"], true);
     let mangaTitle = fallback($$props["mangaTitle"], "Reader");
     let chapterTitle = fallback($$props["chapterTitle"], "");
@@ -251,10 +263,11 @@ function ReaderOverlay($$renderer, $$props) {
       autoScrollTimer = void 0;
     }
     onDestroy(stopAutoScroll);
-    sortedChapters = [...chapters].sort((a, b) => Number(a.number) - Number(b.number));
-    currentChapterIndex = sortedChapters.findIndex((item) => item.id === chapter.id);
-    previousChapter = currentChapterIndex > 0 ? sortedChapters[currentChapterIndex - 1] : void 0;
-    nextChapter = currentChapterIndex >= 0 && currentChapterIndex < sortedChapters.length - 1 ? sortedChapters[currentChapterIndex + 1] : void 0;
+    navigationChapters = [...chapters].sort((a, b) => Number(a.number) - Number(b.number));
+    [...chapters].sort((a, b) => Number(b.number) - Number(a.number));
+    currentChapterIndex = navigationChapters.findIndex((item) => item.id === chapter.id);
+    previousChapter = currentChapterIndex > 0 ? navigationChapters[currentChapterIndex - 1] : void 0;
+    nextChapter = currentChapterIndex >= 0 && currentChapterIndex < navigationChapters.length - 1 ? navigationChapters[currentChapterIndex + 1] : void 0;
     if (visible) {
       $$renderer2.push("<!--[0-->");
       $$renderer2.push(`<div class="pointer-events-none fixed inset-x-0 top-0 z-40 bg-gradient-to-b from-black/90 via-black/65 to-transparent p-3 pb-16 text-white"><div class="pointer-events-auto mx-auto flex max-w-5xl items-center gap-3 rounded-lg border border-white/10 bg-black/55 p-2 shadow-soft backdrop-blur" role="presentation"><button class="focus-ring rounded-md bg-white/10 p-2 transition hover:bg-white/20" type="button" title="Back">`);
@@ -289,9 +302,9 @@ function ReaderOverlay($$renderer, $$props) {
         $$renderer2.push(`<!----></a>`);
       } else {
         $$renderer2.push("<!--[-1-->");
-        $$renderer2.push(`<a class="focus-ring grid place-items-center rounded-md bg-white/10 p-2 transition hover:bg-white/20"${attr("href", `/manga/${sourceId}/${mangaId}`)} title="Home">`);
-        House($$renderer2, { size: 20 });
-        $$renderer2.push(`<!----></a>`);
+        $$renderer2.push(`<button class="grid place-items-center rounded-md bg-white/5 p-2 text-white/30" type="button" title="No next chapter" disabled="">`);
+        Chevron_right($$renderer2, { size: 20 });
+        $$renderer2.push(`<!----></button>`);
       }
       $$renderer2.push(`<!--]--> <button${attr_class(`focus-ring grid place-items-center rounded-md bg-white/10 p-2 transition hover:bg-white/20 ${autoScroll ? "bg-white text-ink" : ""}`)} type="button" title="Autoscroll">`);
       if (autoScroll) {
@@ -335,10 +348,19 @@ function Reader($$renderer, $$props) {
     let sourceId = fallback($$props["sourceId"], () => manga.sourceId, true);
     let mangaId = fallback($$props["mangaId"], () => manga.id, true);
     let pages = fallback($$props["pages"], () => [], true);
-    let page = 0;
     let overlayVisible = false;
     let loadedPages = {};
     let failedPages = {};
+    let isRestoring = false;
+    let restoreTimers = [];
+    function savePosition() {
+      if (store_get($$store_subs ??= {}, "$settings", settings).reader.incognito || !total || isRestoring || true) return;
+    }
+    onDestroy(() => {
+      restoreTimers.forEach((timer) => window.clearTimeout(timer));
+      isRestoring = false;
+      savePosition();
+    });
     total = pages.length;
     settledPages = Object.keys(loadedPages).length + Object.keys(failedPages).length;
     loadingProgress = total ? Math.round(settledPages / total * 100) : 0;
@@ -346,22 +368,7 @@ function Reader($$renderer, $$props) {
     fit = store_get($$store_subs ??= {}, "$settings", settings).reader.fit;
     background = store_get($$store_subs ??= {}, "$settings", settings).reader.background;
     chapterTitle = `Chapter ${chapter.number || "?"}${chapter.title ? `: ${chapter.title}` : ""}`;
-    if (!store_get($$store_subs ??= {}, "$settings", settings).reader.incognito && total) {
-      readChapters.update((items) => ({ ...items, [chapter.id]: page }));
-      history.update((items) => {
-        const next = items.filter((item) => item.chapter.id !== chapter.id);
-        return [
-          {
-            manga,
-            chapter,
-            lastPage: page,
-            totalPages: total,
-            lastReadAt: (/* @__PURE__ */ new Date()).toISOString()
-          },
-          ...next
-        ].slice(0, 200);
-      });
-    }
+    `${sourceId}:${mangaId}:${chapter.id}`;
     head("1bhacov", $$renderer2, ($$renderer3) => {
       $$renderer3.title(($$renderer4) => {
         $$renderer4.push(`<title>${escape_html(manga.title)} · ${escape_html(chapterTitle)}</title>`);

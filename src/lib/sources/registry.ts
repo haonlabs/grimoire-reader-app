@@ -1,5 +1,7 @@
 import { BatoToSource } from './batoto';
+import { DoujinDesuSource } from './doujindesu';
 import { KomikcastSource } from './komikcast';
+import { KomikTapSource } from './komiktap';
 import { KomikuSource } from './komiku';
 import { KotatsuGenericSource } from './kotatsuGeneric';
 import { MangaDexSource } from './mangadex';
@@ -15,9 +17,13 @@ export const SOURCE_REGISTRY: Record<string, MangaSource> = {
   mangafire: new MangaFireSource(),
   mangaplus: new MangaPlusSource(),
   batoto: new BatoToSource(),
+  doujindesu: new DoujinDesuSource('doujindesu'),
+  kotatsu_id_doujindesuparser: new DoujinDesuSource('kotatsu_id_doujindesuparser'),
   komiku: new KomikuSource(),
   shinigami: new ShinigamiSource(),
-  komikcast: new KomikcastSource()
+  komikcast: new KomikcastSource(),
+  komiktap: new KomikTapSource('komiktap'),
+  kotatsu_mangareader_id_komiktapparser: new KomikTapSource('kotatsu_mangareader_id_komiktapparser')
 };
 
 export function getSource(sourceId: string): MangaSource {

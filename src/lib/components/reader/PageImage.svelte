@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
   import { proxiedImageUrl } from '$lib/utils/image';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import SkeletonProgress from '$lib/components/ui/SkeletonProgress.svelte';
 
   export let src: string;
@@ -12,6 +13,7 @@
   let loaded = false;
   let failed = false;
   let currentSrc = '';
+  let frame: HTMLDivElement;
 
   $: fitClass =
     fit === 'height'
@@ -28,8 +30,17 @@
     failed = false;
   }
 
-  function handleLoad() {
+  async function handleLoad() {
+    const before = frame?.offsetHeight ?? 0;
+    const rect = frame?.getBoundingClientRect();
     loaded = true;
+    await tick();
+
+    const after = frame?.offsetHeight ?? before;
+    if (rect && rect.bottom < 0 && after !== before) {
+      window.scrollBy({ top: after - before, left: 0, behavior: 'auto' });
+    }
+
     dispatch('load', { index });
   }
 
@@ -39,10 +50,14 @@
   }
 </script>
 
-<div class="relative flex min-h-64 w-full items-center justify-center">
+<div
+  bind:this={frame}
+  class="relative flex w-full items-center justify-center {!loaded && !failed ? 'min-h-[72vh]' : 'min-h-0'}"
+  data-reader-page={index}
+>
   {#if !loaded && !failed}
     <div class="relative my-1 h-[72vh] w-full max-w-4xl overflow-hidden rounded-sm bg-white/10">
-      <div class="absolute inset-0 shimmer" aria-label={`Loading page ${index + 1}`}></div>
+      <Skeleton class="absolute inset-0 rounded-sm" aria-label={`Loading page ${index + 1}`} />
       <div class="absolute left-1/2 top-1/2 w-[min(24rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">
         <SkeletonProgress label="Memuat halaman" value={progress} />
       </div>

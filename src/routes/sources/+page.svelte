@@ -1,5 +1,9 @@
 <script lang="ts">
   import { CheckCircle2, CircleOff, Search, Star, StarOff } from 'lucide-svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import Card from '$lib/components/ui/Card.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
+  import Select from '$lib/components/ui/Select.svelte';
   import type { SourceMetadata } from '$lib/sources/types';
   import { enabledSources, settings } from '$lib/stores/settings';
 
@@ -57,7 +61,7 @@
   }
 </script>
 
-<section class="mb-5 rounded-lg border border-white/10 bg-[#101012] p-4">
+<Card class="mb-5 p-4">
   <p class="text-sm font-semibold uppercase tracking-wide text-violet-300">Source Manager</p>
   <h1 class="mt-1 text-3xl font-extrabold text-white">Sources</h1>
   <p class="mt-1 text-sm text-white/55">
@@ -65,62 +69,62 @@
   </p>
 
   <div class="mt-4 grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-black/20 p-1">
-    <button
-      class="focus-ring rounded-md px-3 py-2 text-sm font-semibold {tab === 'all' ? 'bg-violet-600 text-white' : 'text-white/60'}"
-      type="button"
+    <Button
+      variant={tab === 'all' ? 'default' : 'ghost'}
+      class="border-0"
       on:click={() => (tab = 'all')}
     >
       All {data.sources.length}
-    </button>
-    <button
-      class="focus-ring rounded-md px-3 py-2 text-sm font-semibold {tab === 'added' ? 'bg-violet-600 text-white' : 'text-white/60'}"
-      type="button"
+    </Button>
+    <Button
+      variant={tab === 'added' ? 'default' : 'ghost'}
+      class="border-0"
       on:click={() => (tab = 'added')}
     >
       Added {addedCount}
-    </button>
-    <button
-      class="focus-ring rounded-md px-3 py-2 text-sm font-semibold {tab === 'available' ? 'bg-violet-600 text-white' : 'text-white/60'}"
-      type="button"
+    </Button>
+    <Button
+      variant={tab === 'available' ? 'default' : 'ghost'}
+      class="border-0"
       on:click={() => (tab = 'available')}
     >
       Available {availableCount}
-    </button>
+    </Button>
   </div>
 
   <div class="mt-4 flex flex-col gap-3 md:flex-row">
     <label class="relative flex-1">
       <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-white/45" size={17} />
-      <input
-        class="focus-ring h-11 w-full rounded-lg border border-white/10 bg-white/10 pl-9 pr-3 text-sm text-white placeholder:text-white/40"
+      <Input
+        class="h-11 pl-9"
         bind:value={query}
         placeholder="Search source"
       />
     </label>
-    <select class="focus-ring h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white" bind:value={language}>
+    <Select class="h-11" bind:value={language}>
       {#each languages as value}<option class="bg-ink" value={value}>{value === 'all' ? 'All languages' : value}</option>{/each}
-    </select>
-    <select class="focus-ring h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white" bind:value={rating}>
+    </Select>
+    <Select class="h-11" bind:value={rating}>
       <option class="bg-ink" value="all">All ratings</option>
       <option class="bg-ink" value="safe">Safe</option>
       <option class="bg-ink" value="suggestive">Suggestive</option>
       <option class="bg-ink" value="explicit">Explicit</option>
-    </select>
-    <select class="focus-ring h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm text-white" bind:value={parser}>
+    </Select>
+    <Select class="h-11" bind:value={parser}>
       <option class="bg-ink" value="all">All parsers</option>
       <option class="bg-ink" value="ready">Native</option>
       <option class="bg-ink" value="generic">Generic</option>
       <option class="bg-ink" value="pending">Catalog only</option>
-    </select>
+    </Select>
   </div>
   <p class="mt-3 text-xs text-white/45">
     Menampilkan {visible.length} dari {matchingSources.length} source cocok.
   </p>
-</section>
+</Card>
 
 <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
   {#each visible as source}
-    <article class="rounded-lg border border-white/10 bg-[#101012] p-4 shadow-sm">
+    <Card class="p-4">
       <div class="flex items-start justify-between gap-3">
         <div class="flex gap-3">
           <span class="grid h-11 w-11 place-items-center rounded-lg bg-white text-sm font-bold text-ink">{source.icon}</span>
@@ -138,9 +142,9 @@
             {/if}
           </div>
         </div>
-        <button class="focus-ring rounded-full p-1 { $enabledSources.includes(source.id) ? 'text-violet-300' : 'text-white/35'}" type="button" title={$enabledSources.includes(source.id) ? 'Remove source' : 'Add source'} on:click={() => toggleSource(source.id)}>
+        <Button class="h-auto rounded-full border-0 p-1 { $enabledSources.includes(source.id) ? 'text-violet-300' : 'text-white/35'}" variant="ghost" title={$enabledSources.includes(source.id) ? 'Remove source' : 'Add source'} on:click={() => toggleSource(source.id)}>
           {#if $enabledSources.includes(source.id)}<CheckCircle2 size={22} />{:else}<CircleOff size={22} />{/if}
-        </button>
+        </Button>
       </div>
       <p class="mt-3 line-clamp-2 text-sm leading-6 text-white/65">{source.description}</p>
       {#if source.baseUrl}
@@ -159,26 +163,25 @@
       <p class="mt-3 line-clamp-2 text-xs capitalize leading-5 text-white/50">Status: {source.health?.status ?? 'unknown'}{source.health?.message ? ` · ${source.health.message}` : ''}</p>
 
       <div class="mt-4 grid grid-cols-2 gap-2">
-        <button
-          class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold {$enabledSources.includes(source.id) ? 'bg-white/10 text-white' : 'bg-violet-600 text-white'}"
-          type="button"
+        <Button
+          variant={$enabledSources.includes(source.id) ? 'secondary' : 'default'}
           on:click={() => toggleSource(source.id)}
         >
           {#if $enabledSources.includes(source.id)}<CircleOff size={16} /> Remove{:else}<CheckCircle2 size={16} /> Add{/if}
-        </button>
-        <button
-          class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45 {activeSource === source.id ? 'bg-white text-ink' : 'bg-white/10 text-white'}"
-          type="button"
+        </Button>
+        <Button
+          variant={activeSource === source.id ? 'outline' : 'secondary'}
+          class={activeSource === source.id ? 'bg-white text-ink hover:bg-white/90' : ''}
           disabled={source.isImplemented === false}
           on:click={() => setDefaultSource(source.id)}
         >
           {#if activeSource === source.id}<Star size={16} class="fill-current" /> Default{:else if source.isImplemented === false}<StarOff size={16} /> Pending{:else}<StarOff size={16} /> Set Default{/if}
-        </button>
+        </Button>
       </div>
-    </article>
+    </Card>
   {:else}
-    <div class="rounded-lg border border-white/10 bg-[#101012] p-5 text-sm text-white/55 md:col-span-2 xl:col-span-3">
+    <Card class="p-5 text-sm text-white/55 md:col-span-2 xl:col-span-3">
       Tidak ada source yang cocok dengan pencarian ini.
-    </div>
+    </Card>
   {/each}
 </div>

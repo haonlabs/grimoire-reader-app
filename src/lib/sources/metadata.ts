@@ -47,6 +47,17 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     icon: 'BT'
   },
   {
+    id: 'doujindesu',
+    name: 'DoujinDesu.tv',
+    description: 'Indonesian explicit source ported directly from the Kotatsu DoujinDesu parser flow.',
+    language: 'id',
+    baseUrl: 'https://doujindesu.tv',
+    contentRating: 'explicit',
+    isNsfw: true,
+    method: 'Scraping',
+    icon: 'DD'
+  },
+  {
     id: 'komiku',
     name: 'Komiku',
     description: 'Indonesian source using the current Komiku API HTML partials and reader pages.',
@@ -78,6 +89,17 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     isNsfw: false,
     method: 'Unofficial API',
     icon: 'KC'
+  },
+  {
+    id: 'komiktap',
+    name: 'KomikTap',
+    description: 'Indonesian source ported from Kotatsu MangaReaderParser with KomikTap page parsing.',
+    language: 'id',
+    baseUrl: 'https://komiktap.info',
+    contentRating: 'suggestive',
+    isNsfw: false,
+    method: 'Scraping',
+    icon: 'KT'
   }
 ];
 

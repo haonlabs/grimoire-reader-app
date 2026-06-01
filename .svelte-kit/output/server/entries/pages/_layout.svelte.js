@@ -1,4 +1,4 @@
-import { a7 as sanitize_props, af as spread_props, ad as slot, I as fallback, j as attr, n as bind_props, ah as store_get, Q as head, F as ensure_array_like, k as attr_class, G as escape_html, al as unsubscribe_stores } from "../../chunks/renderer.js";
+import { a7 as sanitize_props, af as spread_props, ad as slot, I as fallback, n as bind_props, ah as store_get, Q as head, F as ensure_array_like, k as attr_class, j as attr, G as escape_html, al as unsubscribe_stores } from "../../chunks/renderer.js";
 import { p as page, n as navigating } from "../../chunks/stores.js";
 import "@sveltejs/kit/internal";
 import "../../chunks/exports.js";
@@ -6,7 +6,8 @@ import "../../chunks/utils.js";
 import "@sveltejs/kit/internal/server";
 import "../../chunks/root.js";
 import "../../chunks/state.svelte.js";
-import { S as Search } from "../../chunks/search.js";
+import { S as Search, I as Input } from "../../chunks/Input.js";
+import { S as Skeleton } from "../../chunks/Skeleton.js";
 import { s as settings } from "../../chunks/settings.js";
 import { H as House, S as Settings } from "../../chunks/settings2.js";
 import { b as Compass, a as Clock, B as Bell, C as Circle_user } from "../../chunks/compass.js";
@@ -104,12 +105,34 @@ function SearchBar($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     let activeSource = fallback($$props["activeSource"], "mangadex");
     let query = "";
-    $$renderer2.push(`<form class="relative flex min-w-0 flex-1 items-center">`);
-    Search($$renderer2, {
-      class: "pointer-events-none absolute left-3 text-white/45",
-      size: 18
-    });
-    $$renderer2.push(`<!----> <input class="focus-ring h-11 w-full rounded-lg border border-white/10 bg-[#151518] pl-10 pr-3 text-sm text-white placeholder:text-white/40 shadow-sm"${attr("value", query)} placeholder="Cari komik"/></form>`);
+    let $$settled = true;
+    let $$inner_renderer;
+    function $$render_inner($$renderer3) {
+      $$renderer3.push(`<form class="relative flex min-w-0 flex-1 items-center">`);
+      Search($$renderer3, {
+        class: "pointer-events-none absolute left-3 text-white/45",
+        size: 18
+      });
+      $$renderer3.push(`<!----> `);
+      Input($$renderer3, {
+        class: "h-11 bg-[#151518] pl-10",
+        placeholder: "Cari komik",
+        get value() {
+          return query;
+        },
+        set value($$value) {
+          query = $$value;
+          $$settled = false;
+        }
+      });
+      $$renderer3.push(`<!----></form>`);
+    }
+    do {
+      $$settled = true;
+      $$inner_renderer = $$renderer2.copy();
+      $$render_inner($$inner_renderer);
+    } while (!$$settled);
+    $$renderer2.subsume($$inner_renderer);
     bind_props($$props, { activeSource });
   });
 }
@@ -143,7 +166,9 @@ function _layout($$renderer, $$props) {
     });
     if (store_get($$store_subs ??= {}, "$navigating", navigating)) {
       $$renderer2.push("<!--[0-->");
-      $$renderer2.push(`<div class="fixed inset-x-0 top-0 z-50 h-1 bg-violet-500/15"><div class="h-full w-full shimmer bg-violet-500/50"></div></div>`);
+      $$renderer2.push(`<div class="fixed inset-x-0 top-0 z-50 h-1 bg-violet-500/15">`);
+      Skeleton($$renderer2, { class: "h-full w-full rounded-none bg-violet-500/50" });
+      $$renderer2.push(`<!----></div>`);
     } else {
       $$renderer2.push("<!--[-1-->");
     }

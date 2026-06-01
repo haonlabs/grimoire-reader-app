@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
+  import { disableScrollHandling } from '$app/navigation';
   import type { Chapter, MangaDetail } from '$lib/sources/types';
-  import { readChapters, history } from '$lib/stores/history';
+  import { readChapters, history, readerPositions, type ReaderPosition } from '$lib/stores/history';
   import { settings } from '$lib/stores/settings';
   import PageImage from './PageImage.svelte';
   import ReaderOverlay from './ReaderOverlay.svelte';
@@ -18,6 +19,12 @@
   let loadedPages: Record<number, true> = {};
   let failedPages: Record<number, true> = {};
   let pointerStart: { x: number; y: number; time: number } | undefined;
+  let readerBody: HTMLDivElement;
+  let mounted = false;
+  let scrollFrame = 0;
+  let isRestoring = false;
+  let restoreTimers: number[] = [];
+  let removeScrollListener: (() => void) | undefined;
 
   $: total = pages.length;
   $: settledPages = Object.keys(loadedPages).length + Object.keys(failedPages).length;
@@ -26,7 +33,8 @@
   $: fit = $settings.reader.fit;
   $: background = $settings.reader.background;
   $: chapterTitle = `Chapter ${chapter.number || '?'}${chapter.title ? `: ${chapter.title}` : ''}`;
-  $: if (!$settings.reader.incognito && total) {
+  $: positionKey = `${sourceId}:${mangaId}:${chapter.id}`;
+  $: if (mounted && !$settings.reader.incognito && total) {
     readChapters.update((items) => ({ ...items, [chapter.id]: page }));
     history.update((items) => {
       const next = items.filter((item) => item.chapter.id !== chapter.id);
@@ -75,11 +83,111 @@
     failedPages = { ...failedPages, [index]: true };
   }
 
+  function getCurrentPosition(): ReaderPosition {
+    const elements = Array.from(readerBody?.querySelectorAll<HTMLElement>('[data-reader-page]') ?? []);
+    const viewportAnchor = window.innerHeight * 0.45;
+    let active = elements[0];
+    let activeIndex = page;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    elements.forEach((element, index) => {
+      const rect = element.getBoundingClientRect();
+      const distance = rect.top <= viewportAnchor && rect.bottom >= viewportAnchor ? 0 : Math.min(Math.abs(rect.top - viewportAnchor), Math.abs(rect.bottom - viewportAnchor));
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        active = element;
+        activeIndex = index;
+      }
+    });
+
+    if (!active) {
+      return {
+        page,
+        pageOffsetRatio: 0,
+        scrollY: window.scrollY,
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    const rect = active.getBoundingClientRect();
+    const pageTop = rect.top + window.scrollY;
+    const pageOffsetRatio = rect.height > 0 ? Math.max(0, Math.min(1, (window.scrollY - pageTop) / rect.height)) : 0;
+
+    return {
+      page: activeIndex,
+      pageOffsetRatio,
+      scrollY: window.scrollY,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function savePosition() {
+    if ($settings.reader.incognito || !total || isRestoring || !readerBody) return;
+    const position = getCurrentPosition();
+    page = position.page;
+    readerPositions.update((items) => ({ ...items, [positionKey]: position, [chapter.id]: position }));
+  }
+
+  function scheduleSavePosition() {
+    if (scrollFrame) return;
+    scrollFrame = window.requestAnimationFrame(() => {
+      scrollFrame = 0;
+      savePosition();
+    });
+  }
+
+  function applyRestoredPosition(position: ReaderPosition | undefined) {
+    const targetPage = position?.page ?? $readChapters[chapter.id] ?? 0;
+    const target = readerBody?.querySelector<HTMLElement>(`[data-reader-page="${targetPage}"]`);
+    if (!target) {
+      window.scrollTo({ top: position?.scrollY ?? 0, behavior: 'auto' });
+      return;
+    }
+
+    const top = target.getBoundingClientRect().top + window.scrollY;
+    const offset = (position?.pageOffsetRatio ?? 0) * target.offsetHeight;
+    window.scrollTo({ top: Math.max(0, top + offset), behavior: 'auto' });
+  }
+
+  async function restorePosition(position: ReaderPosition | undefined) {
+    isRestoring = true;
+    await tick();
+
+    window.requestAnimationFrame(() => applyRestoredPosition(position));
+    for (const delay of [80, 220, 500]) {
+      restoreTimers.push(window.setTimeout(() => applyRestoredPosition(position), delay));
+    }
+    restoreTimers.push(
+      window.setTimeout(() => {
+        isRestoring = false;
+        savePosition();
+      }, 650)
+    );
+  }
+
   onMount(() => {
-    page = $readChapters[chapter.id] ?? 0;
+    disableScrollHandling();
+    const savedPosition = $readerPositions[positionKey] ?? $readerPositions[chapter.id];
+    page = savedPosition?.page ?? $readChapters[chapter.id] ?? 0;
     overlayVisible = false;
     loadedPages = {};
     failedPages = {};
+    mounted = true;
+    restorePosition(savedPosition);
+    window.addEventListener('scroll', scheduleSavePosition, { passive: true });
+    window.addEventListener('pagehide', savePosition);
+    removeScrollListener = () => {
+      window.removeEventListener('scroll', scheduleSavePosition);
+      window.removeEventListener('pagehide', savePosition);
+    };
+  });
+
+  onDestroy(() => {
+    if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+    restoreTimers.forEach((timer) => window.clearTimeout(timer));
+    isRestoring = false;
+    savePosition();
+    removeScrollListener?.();
   });
 </script>
 
@@ -102,6 +210,7 @@
 
   <main class="mx-auto flex max-w-5xl flex-col gap-0 px-0 py-16 sm:px-8">
     <div
+      bind:this={readerBody}
       class="flex flex-col items-center gap-0"
       role="button"
       tabindex="0"

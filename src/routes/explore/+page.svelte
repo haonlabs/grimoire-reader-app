@@ -1,14 +1,18 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { browser } from '$app/environment';
-  import { ChevronRight, Megaphone } from 'lucide-svelte';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
   import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import Card from '$lib/components/ui/Card.svelte';
   import FilterPanel from '$lib/components/ui/FilterPanel.svelte';
-  import { enabledSources, settings } from '$lib/stores/settings';
+  import Select from '$lib/components/ui/Select.svelte';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import type { Manga, MangaListResult, SourceMetadata } from '$lib/sources/types';
+  import { enabledSources, settings } from '$lib/stores/settings';
   import { proxiedImageUrl } from '$lib/utils/image';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
+  import { ChevronRight, Megaphone } from 'lucide-svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   export let data: { sources?: SourceMetadata[] };
 
@@ -17,12 +21,18 @@
   let page = 1;
   let loading = false;
   let error = '';
+  let paginationNotice = '';
   let hasNextPage = false;
   let view: 'grid' | 'list' = 'grid';
   let sort = 'updated';
   let status = 'all';
   let lastKey = '';
   let mounted = false;
+  let requestId = 0;
+  let loadingStartedAt = 0;
+  let activeController: AbortController | undefined;
+  let activeTimeout: number | undefined;
+  let recoveryTimer: number | undefined;
   let formatTab = 'Manhwa';
   let updateTab = 'Project';
 
@@ -58,33 +68,129 @@
   }
 
   async function loadList(nextPage = page) {
+    activeController?.abort();
+    if (activeTimeout) window.clearTimeout(activeTimeout);
+    const currentRequest = ++requestId;
+    const controller = new AbortController();
+    activeController = controller;
+    activeTimeout = window.setTimeout(() => controller.abort(), 20_000);
     loading = true;
+    loadingStartedAt = Date.now();
     error = '';
+    paginationNotice = '';
     const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
     try {
-      const response = await fetch(`/api/${sourceId}/list?page=${nextPage}&filters=${filters}`);
+      const response = await fetch(`/api/${sourceId}/list?page=${nextPage}&filters=${filters}&_=${Date.now()}`, {
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      if (currentRequest !== requestId) return;
       if (!response.ok) {
         const body = await response.json();
         throw new Error(body.error ?? 'Source failed');
       }
       const result = (await response.json()) as MangaListResult;
+      if (currentRequest !== requestId) return;
       items = uniqueManga(result.items);
       page = result.page;
       hasNextPage = result.hasNextPage;
       featured = result.items.slice(0, 6);
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Unable to load manga';
+      if (currentRequest !== requestId) return;
+      error = err instanceof Error && err.name === 'AbortError' ? 'Source terlalu lama merespons. Coba refresh atau pilih source lain.' : err instanceof Error ? err.message : 'Unable to load manga';
       items = [];
       featured = [];
     } finally {
-      loading = false;
+      if (activeTimeout) window.clearTimeout(activeTimeout);
+      if (activeController === controller) activeController = undefined;
+      if (currentRequest === requestId) loading = false;
     }
+  }
+
+  async function loadLastPage() {
+    activeController?.abort();
+    if (activeTimeout) window.clearTimeout(activeTimeout);
+    const currentRequest = ++requestId;
+    const controller = new AbortController();
+    activeController = controller;
+    activeTimeout = window.setTimeout(() => controller.abort(), 90_000);
+    loading = true;
+    loadingStartedAt = Date.now();
+    error = '';
+    paginationNotice = '';
+    const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
+
+    try {
+      let targetPage = Math.max(1, page);
+      let lastResult: MangaListResult | undefined;
+      const maxSteps = 120;
+
+      for (let step = 0; step < maxSteps; step += 1) {
+        const response = await fetch(`/api/${sourceId}/list?page=${targetPage}&filters=${filters}&_=${Date.now()}`, {
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        if (currentRequest !== requestId) return;
+        if (!response.ok) {
+          const body = await response.json();
+          throw new Error(body.error ?? 'Source failed');
+        }
+
+        const result = (await response.json()) as MangaListResult;
+        if (currentRequest !== requestId) return;
+        lastResult = result;
+        if (!result.hasNextPage || !result.items.length) break;
+        targetPage = result.page + 1;
+      }
+
+      if (!lastResult) return;
+      items = uniqueManga(lastResult.items);
+      page = lastResult.page;
+      hasNextPage = lastResult.hasNextPage;
+      featured = lastResult.items.slice(0, 6);
+      if (lastResult.hasNextPage) {
+        paginationNotice = 'Halaman akhir terlalu jauh untuk dicari sekaligus. Sudah dibawa ke halaman terjauh yang berhasil dimuat.';
+      }
+    } catch (err) {
+      if (currentRequest !== requestId) return;
+      error =
+        err instanceof Error && err.name === 'AbortError'
+          ? 'Source terlalu lama mencari halaman akhir. Coba next beberapa halaman atau pilih source lain.'
+          : err instanceof Error
+            ? err.message
+            : 'Unable to load manga';
+    } finally {
+      if (activeTimeout) window.clearTimeout(activeTimeout);
+      if (activeController === controller) activeController = undefined;
+      if (currentRequest === requestId) loading = false;
+    }
+  }
+
+  function recoverStuckLoading() {
+    if (!loading || items.length || Date.now() - loadingStartedAt < 5_000) return;
+    activeController?.abort();
+    loading = false;
+    loadList(1);
   }
 
   onMount(() => {
     mounted = true;
     lastKey = key;
-    loadList(1);
+    if (sources.length) loadList(1);
+    else {
+      loading = false;
+      error = 'Belum ada source yang ditambahkan. Buka Profile > All Series untuk add source.';
+    }
+    recoveryTimer = window.setInterval(recoverStuckLoading, 2_000);
+    window.addEventListener('pageshow', recoverStuckLoading);
+  });
+
+  onDestroy(() => {
+    activeController?.abort();
+    if (!browser) return;
+    if (activeTimeout) window.clearTimeout(activeTimeout);
+    if (recoveryTimer) window.clearInterval(recoveryTimer);
+    window.removeEventListener('pageshow', recoverStuckLoading);
   });
 
   function setSource(event: Event) {
@@ -105,13 +211,13 @@
         alt={hero.title}
       />
     {:else}
-      <div class="absolute inset-0 shimmer bg-white/10"></div>
+      <Skeleton class="absolute inset-0 rounded-none" />
     {/if}
     <div class="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/15"></div>
     <div class="relative flex min-h-[18rem] max-w-2xl flex-col justify-end p-5 sm:p-7">
       <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-300">{sourceName}</p>
       <h1 class="line-clamp-2 text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-        {hero?.title ?? 'GRIMOIRE ID'}
+        {hero?.title ?? 'GRIMOIRE'}
       </h1>
       <p class="mt-3 line-clamp-3 text-sm leading-6 text-white/70">
         {hero?.description ?? 'Baca manhwa, manga, dan manhua dengan tampilan clean seperti Shinigami.'}
@@ -136,21 +242,20 @@
   </section>
 </section>
 
-<section class="mb-5 flex flex-col gap-3 rounded-lg border border-white/10 bg-[#101012] p-4 lg:flex-row lg:items-end lg:justify-between">
+<Card class="mb-5 flex flex-col gap-3 p-4 lg:flex-row lg:items-end lg:justify-between">
   <label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">
     Source
-    <select
-      class="focus-ring rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm normal-case text-white"
+    <Select
       value={sourceId}
       on:change={setSource}
     >
       {#each sources as source}
         <option class="bg-ink" value={source.id}>{source.name}</option>
       {/each}
-    </select>
+    </Select>
   </label>
   <FilterPanel bind:view bind:sort bind:status on:click={() => loadList(1)} />
-</section>
+</Card>
 
 {#if recommended.length}
   <section class="mb-8">
@@ -158,13 +263,14 @@
       <h2 class="text-xl font-bold text-white">Rekomendasi</h2>
       <div class="flex rounded-lg border border-white/10 bg-[#141416] p-1">
         {#each ['Manhwa', 'Manga', 'Manhua'] as tab}
-          <button
-            class="focus-ring rounded-md px-3 py-1.5 text-sm font-medium {formatTab === tab ? 'bg-violet-600 text-white' : 'text-white/60'}"
-            type="button"
+          <Button
+            variant={formatTab === tab ? 'default' : 'ghost'}
+            size="sm"
+            class="border-0"
             on:click={() => (formatTab = tab)}
           >
             {tab}
-          </button>
+          </Button>
         {/each}
       </div>
     </div>
@@ -174,7 +280,7 @@
           {#if manga.coverUrl}
             <img class="h-full w-full object-cover transition group-hover:scale-105" src={proxiedImageUrl(manga.coverUrl)} alt={manga.title} />
           {:else}
-            <div class="h-full w-full shimmer bg-white/10"></div>
+            <Skeleton class="h-full w-full rounded-none" />
           {/if}
           <span class="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
             {mangaFormatLabel(manga)}
@@ -190,10 +296,10 @@
   <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>
 {:else if loading && !items.length}
   <section class="mb-8" aria-label="Loading featured manga">
-    <div class="mb-3 h-6 w-44 rounded shimmer bg-ink/10 dark:bg-white/10"></div>
+    <Skeleton class="mb-3 h-6 w-44" />
     <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
       {#each Array(6) as _}
-        <div class="aspect-[3/4] rounded-lg shimmer bg-ink/10 dark:bg-white/10"></div>
+        <Skeleton class="aspect-[3/4] rounded-lg" />
       {/each}
     </div>
   </section>
@@ -206,13 +312,14 @@
         <div class="flex items-center gap-2">
           <div class="flex rounded-lg border border-white/10 bg-[#141416] p-1">
             {#each ['Project', 'Mirror'] as tab}
-              <button
-                class="focus-ring rounded-md px-3 py-1.5 text-sm font-medium {updateTab === tab ? 'bg-violet-600 text-white' : 'text-white/60'}"
-                type="button"
+              <Button
+                variant={updateTab === tab ? 'default' : 'ghost'}
+                size="sm"
+                class="border-0"
                 on:click={() => (updateTab = tab)}
               >
                 {tab}
-              </button>
+              </Button>
             {/each}
           </div>
         </div>
@@ -220,38 +327,49 @@
       <MangaGrid items={updateItems} {view} />
     </section>
   {:else}
-    <div class="rounded-lg border border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
+    <Card class="border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
       Tidak ada manga yang bisa ditampilkan dari {sourceName}. Kalau source ini baru ditambahkan, kemungkinan parser-nya belum cocok dengan markup situs atau domainnya sedang tidak bisa diakses dari network ini.
-    </div>
+    </Card>
   {/if}
   {#if page > 1 || hasNextPage}
+    {#if paginationNotice}
+      <div class="mt-6 rounded-lg border border-white/10 bg-white/10 p-3 text-center text-sm text-white/70">{paginationNotice}</div>
+    {/if}
     <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
-      <button
-        class="focus-ring rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
-        type="button"
+      <Button
+        variant="outline"
+        disabled={loading || page <= 1}
+        on:click={() => loadList(1)}
+      >
+        First
+      </Button>
+      <Button
+        variant="secondary"
         disabled={loading || page <= 1}
         on:click={() => loadList(page - 1)}
       >
         Previous
-      </button>
+      </Button>
       {#if page > 2}
-        <button class="focus-ring rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70" type="button" disabled={loading} on:click={() => loadList(page - 2)}>{page - 2}</button>
+        <Button variant="outline" size="sm" disabled={loading} on:click={() => loadList(page - 2)}>{page - 2}</Button>
       {/if}
       {#if page > 1}
-        <button class="focus-ring rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70" type="button" disabled={loading} on:click={() => loadList(page - 1)}>{page - 1}</button>
+        <Button variant="outline" size="sm" disabled={loading} on:click={() => loadList(page - 1)}>{page - 1}</Button>
       {/if}
       <span class="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">{loading ? '...' : page}</span>
       {#if hasNextPage}
-        <button class="focus-ring rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70" type="button" disabled={loading} on:click={() => loadList(page + 1)}>{page + 1}</button>
+        <Button variant="outline" size="sm" disabled={loading} on:click={() => loadList(page + 1)}>{page + 1}</Button>
       {/if}
-      <button
-        class="focus-ring rounded-lg bg-white px-4 py-2 text-sm font-semibold text-ink transition disabled:cursor-not-allowed disabled:opacity-40"
-        type="button"
-        disabled={loading || !hasNextPage}
-        on:click={() => loadList(page + 1)}
-      >
+      <Button disabled={loading || !hasNextPage} on:click={() => loadList(page + 1)}>
         Next
-      </button>
+      </Button>
+      <Button
+        variant="outline"
+        disabled={loading || !hasNextPage}
+        on:click={loadLastPage}
+      >
+        Last
+      </Button>
     </div>
   {/if}
 {/if}

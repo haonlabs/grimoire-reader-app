@@ -9,5 +9,13 @@ export interface HistoryEntry {
   lastReadAt: string;
 }
 
+export interface ReaderPosition {
+  page: number;
+  pageOffsetRatio: number;
+  scrollY: number;
+  updatedAt: string;
+}
+
 export const history = localStore<HistoryEntry[]>('manga_history', []);
 export const readChapters = localStore<Record<string, number>>('manga_read_chapters', {});
+export const readerPositions = localStore<Record<string, ReaderPosition>>('manga_reader_positions', {});
