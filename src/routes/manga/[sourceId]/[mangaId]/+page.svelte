@@ -40,7 +40,8 @@
     data.chapters.find((chapter) => chapter.id === lastChapterId) ??
     data.chapters.find((chapter) => $readChapters[chapter.id] !== undefined) ??
     firstChapter;
-  $: ratingLabel = data.manga?.rating ? data.manga.rating.toFixed(1) : '-';
+  $: hasRating = typeof data.manga?.rating === 'number' && Number.isFinite(data.manga.rating) && data.manga.rating > 0;
+  $: ratingLabel = (hasRating ? data.manga!.rating! : 0).toFixed(1);
   $: description = data.manga?.description ?? '';
   $: formatLabel = data.manga ? mangaFormatLabel(data.manga) : 'Manga';
   $: coverUrl = data.manga?.coverUrl ?? '';
@@ -165,7 +166,10 @@
 
       <div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div class="rounded-lg border border-white/10 bg-[#101012] p-3">
-          <div class="flex items-center gap-2 text-gold"><Star size={17} class="fill-gold" /><span class="font-bold">{ratingLabel}</span></div>
+          <div class="flex items-center gap-2 {hasRating ? 'text-gold' : 'text-white/35'}">
+            <Star size={17} class={hasRating ? 'fill-gold text-gold' : 'fill-white/25 text-white/25'} />
+            <span class="font-bold">{ratingLabel}</span>
+          </div>
           <p class="mt-1 text-xs text-white/45">Rating</p>
         </div>
         <div class="rounded-lg border border-white/10 bg-[#101012] p-3">

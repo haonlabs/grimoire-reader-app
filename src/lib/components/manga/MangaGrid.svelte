@@ -9,12 +9,38 @@
   export let view: 'grid' | 'list' = 'grid';
   export let sourceNames: Record<string, string> = {};
 
+  let loadCursor = 0;
+  let lastItemsKey = '';
+
+  $: itemsKey = items.map((manga) => `${manga.sourceId}:${manga.id}`).join('\n');
+  $: if (itemsKey !== lastItemsKey) {
+    lastItemsKey = itemsKey;
+    loadCursor = 0;
+  }
+
+  function markCardReady(index: number) {
+    if (index !== loadCursor) return;
+    loadCursor = Math.min(loadCursor + 1, items.length);
+  }
+
+  function hasMangaRating(manga: Manga) {
+    return typeof manga.rating === 'number' && Number.isFinite(manga.rating) && manga.rating > 0;
+  }
+
+  function mangaRatingValue(manga: Manga) {
+    return hasMangaRating(manga) ? manga.rating! : 0;
+  }
 </script>
 
 {#if view === 'grid'}
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-    {#each items as manga (manga.sourceId + manga.id)}
-      <MangaCard {manga} sourceName={sourceNames[manga.sourceId]} />
+    {#each items as manga, index (manga.sourceId + manga.id)}
+      <MangaCard
+        {manga}
+        sourceName={sourceNames[manga.sourceId]}
+        shouldLoad={index <= loadCursor}
+        on:ready={() => markCardReady(index)}
+      />
     {/each}
   </div>
 {:else}
@@ -46,12 +72,13 @@
             <span class="rounded-full bg-violet-500/15 px-2 py-1 font-semibold text-violet-200">{mangaFormatLabel(manga)}</span>
             <span class="rounded-full bg-ink/5 px-2 py-1 font-semibold dark:bg-white/10">{sourceNames[manga.sourceId] ?? manga.sourceId}</span>
             <span class="rounded-full bg-ink/5 px-2 py-1 capitalize dark:bg-white/10">{manga.status}</span>
-            {#if manga.rating}
-              <span class="inline-flex items-center gap-1">
-                <Star size={13} class="fill-gold text-gold" />
-                {manga.rating.toFixed(1)}
-              </span>
-            {/if}
+            <span class="inline-flex items-center gap-1 {hasMangaRating(manga) ? 'text-gold' : 'text-ink/35 dark:text-white/35'}">
+              <Star
+                size={13}
+                class={hasMangaRating(manga) ? 'fill-gold text-gold' : 'fill-ink/25 text-ink/25 dark:fill-white/25 dark:text-white/25'}
+              />
+              {mangaRatingValue(manga).toFixed(1)}
+            </span>
             {#each manga.genres.slice(0, 2) as genre}
               <span>{genre}</span>
             {/each}

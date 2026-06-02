@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount, tick } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import { BookOpen, Star } from 'lucide-svelte';
   import type { Chapter, Manga } from '$lib/sources/types';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
@@ -11,111 +11,154 @@
   export let compact = false;
   export let sourceName = '';
   export let showChapterShortcuts = true;
+  export let shouldLoad = true;
 
+  const dispatch = createEventDispatcher<{ ready: void }>();
   let coverLoaded = false;
   let coverFailed = false;
-  let coverElement: HTMLImageElement | undefined;
-  let lastCoverUrl = '';
-  let coverCheckQueued = false;
+  let coverRequested = false;
+  let coverDone = false;
+  let displayCoverUrl = '';
   let chapters: Chapter[] = [];
   let chaptersLoading = false;
   let chaptersFailed = false;
+  let chaptersDone = false;
   let chapterLoadKey = '';
-  let cardElement: HTMLElement;
-  let chapterObserver: IntersectionObserver | undefined;
+  let lastCardKey = '';
+  let readySent = false;
+  let coverTimer: number | undefined;
 
   $: format = mangaFormatLabel(manga);
   $: sourceLabel = sourceName || manga.sourceId;
   $: coverUrl = manga.coverUrl ?? '';
   $: mangaHref = `/manga/${manga.sourceId}/${manga.id}`;
+  $: hasRating = typeof manga.rating === 'number' && Number.isFinite(manga.rating) && manga.rating > 0;
+  $: ratingValue = hasRating ? manga.rating! : 0;
+  $: cardKey = `${manga.sourceId}:${manga.id}:${coverUrl}:${showChapterShortcuts}`;
   $: latestChapters = [...chapters]
     .sort((left, right) => Number(right.number) - Number(left.number))
     .slice(0, 3);
-  $: if (coverUrl !== lastCoverUrl) {
-    lastCoverUrl = coverUrl;
+  $: if (cardKey !== lastCardKey) resetCard(cardKey);
+  $: if (shouldLoad && !coverRequested) startCoverLoad();
+  $: if (shouldLoad && showChapterShortcuts && !chapterLoadKey && !chaptersLoading) loadChapterShortcuts();
+  $: if (shouldLoad) notifyReady();
+
+  function resetCard(nextKey: string) {
+    lastCardKey = nextKey;
+    clearCoverTimer();
     coverLoaded = false;
     coverFailed = false;
+    coverRequested = false;
+    coverDone = !coverUrl;
+    displayCoverUrl = '';
+    chapters = [];
+    chaptersLoading = false;
+    chaptersFailed = false;
+    chaptersDone = !showChapterShortcuts;
+    chapterLoadKey = '';
+    readySent = false;
   }
-  $: if (coverElement && coverUrl && !coverLoaded && !coverFailed) checkCachedCover();
 
-  async function checkCachedCover() {
-    if (coverCheckQueued) return;
-    coverCheckQueued = true;
-    await tick();
-    coverCheckQueued = false;
-    if (!coverElement || coverLoaded || coverFailed) return;
-    if (!coverElement.complete) return;
-    if (coverElement.naturalWidth > 0) coverLoaded = true;
-    else coverFailed = true;
+  function startCoverLoad() {
+    coverRequested = true;
+    if (!coverUrl) {
+      coverDone = true;
+      notifyReady();
+      return;
+    }
+    displayCoverUrl = proxiedImageUrl(coverUrl);
+    if (typeof window !== 'undefined') {
+      coverTimer = window.setTimeout(() => {
+        if (!coverDone) handleCoverError();
+      }, 12_000);
+    }
   }
 
   async function loadChapterShortcuts() {
     const key = `${manga.sourceId}:${manga.id}`;
-    if (!showChapterShortcuts || chapterLoadKey === key) return;
+    if (typeof window === 'undefined' || !showChapterShortcuts || chapterLoadKey === key) return;
     chapterLoadKey = key;
     chapters = [];
     chaptersFailed = false;
     chaptersLoading = true;
+    chaptersDone = false;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 12_000);
 
     try {
-      const response = await sourceFetch(fetch, manga.sourceId, `/api/${manga.sourceId}/manga/${manga.id}/chapters`);
+      const response = await sourceFetch(fetch, manga.sourceId, `/api/${manga.sourceId}/manga/${manga.id}/chapters`, {
+        signal: controller.signal
+      });
       if (!response.ok) throw new Error('Unable to load chapters');
       chapters = await response.json();
     } catch {
       chaptersFailed = true;
     } finally {
+      window.clearTimeout(timer);
       chaptersLoading = false;
+      chaptersDone = true;
+      notifyReady();
     }
   }
 
-  onMount(() => {
-    if (!showChapterShortcuts || typeof IntersectionObserver === 'undefined') {
-      loadChapterShortcuts();
-      return;
-    }
+  function handleCoverLoad() {
+    clearCoverTimer();
+    coverLoaded = true;
+    coverDone = true;
+    notifyReady();
+  }
 
-    chapterObserver = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        chapterObserver?.disconnect();
-        chapterObserver = undefined;
-        loadChapterShortcuts();
-      },
-      { rootMargin: '700px 0px' }
-    );
-    if (cardElement) chapterObserver.observe(cardElement);
+  function handleCoverError() {
+    clearCoverTimer();
+    coverLoaded = true;
+    coverFailed = true;
+    coverDone = true;
+    notifyReady();
+  }
+
+  function notifyReady() {
+    if (readySent || !coverDone || !chaptersDone) return;
+    readySent = true;
+    dispatch('ready');
+  }
+
+  function clearCoverTimer() {
+    if (!coverTimer) return;
+    clearTimeout(coverTimer);
+    coverTimer = undefined;
+  }
+
+  onDestroy(() => {
+    clearCoverTimer();
   });
-
-  onDestroy(() => chapterObserver?.disconnect());
 </script>
 
 <article
-  bind:this={cardElement}
   class="group flex h-full flex-col overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft dark:border-white/10 dark:bg-[#141416]"
 >
   <a class="block" href={mangaHref} aria-label={manga.title}>
     <div class="relative aspect-[2/3] w-full shrink-0 overflow-hidden bg-ink/10 dark:bg-white/10">
-    {#if manga.coverUrl && !coverFailed}
+    {#if displayCoverUrl && !coverFailed}
       {#if !coverLoaded}
         <Skeleton class="absolute inset-0 rounded-none" />
       {/if}
       <img
-        bind:this={coverElement}
         class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] {coverLoaded ? 'opacity-100' : 'opacity-0'}"
-        src={proxiedImageUrl(manga.coverUrl)}
+        src={displayCoverUrl}
         alt={manga.title}
-        loading="lazy"
+        loading="eager"
         decoding="async"
-        on:load={() => (coverLoaded = true)}
-        on:error={() => {
-          coverLoaded = true;
-          coverFailed = true;
-        }}
+        on:load={handleCoverLoad}
+        on:error={handleCoverError}
       />
     {:else}
-      <div class="flex h-full items-center justify-center text-ink/40 dark:text-white/40">
-        <BookOpen size={36} />
-      </div>
+      {#if coverFailed || !coverUrl}
+        <div class="flex h-full items-center justify-center text-ink/40 dark:text-white/40">
+          <BookOpen size={36} />
+        </div>
+      {:else}
+        <Skeleton class="absolute inset-0 rounded-none" />
+      {/if}
     {/if}
     <span class="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-soft">
       {format}
@@ -135,12 +178,10 @@
       <span class="truncate rounded-full bg-ink/5 px-2 py-1 capitalize dark:bg-white/10">{manga.status}</span>
       <span class="shrink-0 rounded-full bg-violet-500/15 px-2 py-1 font-semibold text-violet-200">{format}</span>
       <span class="max-w-full truncate rounded-full bg-ink/5 px-2 py-1 font-semibold text-ink/70 dark:bg-white/10 dark:text-white/70">{sourceLabel}</span>
-      {#if manga.rating}
-        <span class="inline-flex items-center gap-1">
-          <Star size={13} class="fill-gold text-gold" />
-          {manga.rating.toFixed(1)}
-        </span>
-      {/if}
+      <span class="inline-flex items-center gap-1 {hasRating ? 'text-gold' : 'text-ink/35 dark:text-white/35'}">
+        <Star size={13} class={hasRating ? 'fill-gold text-gold' : 'fill-ink/25 text-ink/25 dark:fill-white/25 dark:text-white/25'} />
+        {ratingValue.toFixed(1)}
+      </span>
     </div>
     {#if !compact && manga.genres.length}
       <div class="flex flex-wrap gap-1">
