@@ -124,7 +124,7 @@
 
   function chapterTimeLabel(value: string) {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Tanggal tidak ada';
+    if (Number.isNaN(date.getTime())) return '-';
     const diffMs = Math.max(0, Date.now() - date.getTime());
     const minute = 60 * 1000;
     const hour = minute * 60;
@@ -132,13 +132,13 @@
     const week = day * 7;
     const month = day * 30;
 
-    if (diffMs < minute) return 'baru saja';
-    if (diffMs < hour) return `${Math.floor(diffMs / minute)} menit lalu`;
-    if (diffMs < day) return `${Math.floor(diffMs / hour)} jam lalu`;
-    if (diffMs < week) return `${Math.floor(diffMs / day)} hari lalu`;
-    if (diffMs < month) return `${Math.floor(diffMs / week)} minggu lalu`;
-    if (diffMs <= month) return '1 bulan lalu';
-    return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (diffMs < minute) return 'now';
+    if (diffMs < hour) return `${Math.floor(diffMs / minute)}m`;
+    if (diffMs < day) return `${Math.floor(diffMs / hour)}h`;
+    if (diffMs < week) return `${Math.floor(diffMs / day)}d`;
+    if (diffMs < month) return `${Math.floor(diffMs / week)}w`;
+    if (diffMs <= month) return '1mo';
+    return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
   }
 
   function clearCoverTimer() {
@@ -219,8 +219,8 @@
               class="focus-ring flex min-h-8 items-center justify-between gap-2 rounded-md border border-ink/10 bg-ink/[0.03] px-2 text-xs font-semibold text-ink/75 transition hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70 dark:hover:text-white"
               href={`/manga/${manga.sourceId}/${manga.id}/${chapter.id}`}
             >
-              <span class="truncate">{chapter.title || `Chapter ${chapter.number}`}</span>
-              <span class="shrink-0 text-[11px] text-ink/45 dark:text-white/45">{chapterTimeLabel(chapter.uploadedAt)}</span>
+              <span class="min-w-0 truncate">{chapter.title || `Chapter ${chapter.number}`}</span>
+              <span class="w-9 shrink-0 text-right text-[11px] text-ink/45 dark:text-white/45">{chapterTimeLabel(chapter.uploadedAt)}</span>
             </a>
           {/each}
         {:else if chaptersLoading || !chapterLoadKey}
