@@ -10,6 +10,7 @@
     Clock,
     Compass,
     Home,
+    LoaderCircle,
     SlidersHorizontal,
     Sparkles,
     UserCircle
@@ -50,6 +51,9 @@
 {#if $navigating}
   <div class="fixed inset-x-0 top-0 z-50 h-1 bg-violet-500/15">
     <Skeleton class="h-full w-full rounded-none bg-violet-500/50" />
+  </div>
+  <div class="fixed right-4 top-4 z-50 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-black/75 text-white shadow-soft backdrop-blur" aria-label="Loading page">
+    <LoaderCircle class="animate-spin" size={18} />
   </div>
 {/if}
 

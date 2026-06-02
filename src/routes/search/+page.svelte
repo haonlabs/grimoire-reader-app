@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { SlidersHorizontal } from 'lucide-svelte';
+  import { LoaderCircle, SlidersHorizontal } from 'lucide-svelte';
   import { page as pageStore } from '$app/stores';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
   import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
@@ -19,6 +19,7 @@
   let errors: Record<string, string> = {};
   let timer: ReturnType<typeof setTimeout>;
 
+  $: anyLoading = Object.values(loading).some(Boolean);
   $: query = $pageStore.url.searchParams.get('q') ?? query;
   $: mode = (($pageStore.url.searchParams.get('mode') as 'active' | 'all') ?? mode) || 'active';
   $: implementedSources = data.sources.filter((item) => item.isImplemented !== false && $enabledSources.includes(item.id));
@@ -66,7 +67,12 @@
   <div class="flex flex-wrap items-start justify-between gap-3">
     <div>
       <p class="text-sm font-semibold uppercase tracking-wide text-violet-300">Search</p>
-      <h1 class="mt-1 text-3xl font-extrabold text-white">Cari komik</h1>
+      <div class="mt-1 flex items-center gap-3">
+        <h1 class="text-3xl font-extrabold text-white">Cari komik</h1>
+        {#if anyLoading}
+          <LoaderCircle class="animate-spin text-violet-300" size={22} aria-label="Searching" />
+        {/if}
+      </div>
     </div>
     <a
       class="focus-ring inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm font-semibold text-white"
@@ -95,7 +101,12 @@
     <section>
       <div class="mb-3 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-white">{sourceMeta.name}</h2>
-        {#if loading[sourceMeta.id]}<Skeleton class="h-4 w-24" aria-label="Loading" />{/if}
+        {#if loading[sourceMeta.id]}
+          <span class="inline-flex items-center gap-2 text-xs font-semibold text-violet-300">
+            <LoaderCircle class="animate-spin" size={15} />
+            Loading
+          </span>
+        {/if}
       </div>
       {#if errors[sourceMeta.id]}
         <div class="rounded-lg border border-ember/30 bg-ember/10 p-4 text-sm text-ember">

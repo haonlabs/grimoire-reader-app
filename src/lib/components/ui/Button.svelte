@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { LoaderCircle } from 'lucide-svelte';
   import type { Snippet } from 'svelte';
 
   export let type: 'button' | 'submit' | 'reset' = 'button';
   export let variant: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' = 'default';
   export let size: 'sm' | 'default' | 'icon' = 'default';
   export let disabled = false;
+  export let loading = false;
   export let title: string | undefined = undefined;
   export let children: Snippet | undefined = undefined;
 
@@ -30,10 +32,13 @@
 <button
   {...$$restProps}
   {type}
-  {disabled}
+  disabled={disabled || loading}
   {title}
   on:click
   class="focus-ring inline-flex shrink-0 items-center justify-center gap-2 rounded-md border font-semibold transition disabled:pointer-events-none disabled:opacity-45 {variantClass} {sizeClass} {$$props.class ?? ''}"
 >
+  {#if loading}
+    <LoaderCircle class="animate-spin" size={size === 'sm' ? 15 : 17} aria-hidden="true" />
+  {/if}
   {@render children?.()}
 </button>

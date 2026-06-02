@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { RefreshCw } from 'lucide-svelte';
+  import Button from '$lib/components/ui/Button.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import { library } from '$lib/stores/library';
   import type { Chapter, Manga } from '$lib/sources/types';
@@ -39,10 +40,10 @@
     <p class="text-sm font-medium text-ember">Updates</p>
     <h1 class="mt-1 text-3xl font-bold text-white">Latest library chapters</h1>
   </div>
-  <button class="focus-ring inline-flex items-center gap-2 rounded-lg bg-ember px-3 py-2 text-sm font-semibold text-white" type="button" on:click={() => checkUpdates(true)}>
-    <RefreshCw class={loading ? 'animate-spin' : ''} size={17} />
+  <Button loading={loading} on:click={() => checkUpdates(true)}>
+    <RefreshCw size={17} />
     Check
-  </button>
+  </Button>
 </section>
 
 <div class="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-[#111116]">

@@ -6,6 +6,7 @@
   export let view: 'grid' | 'list' = 'grid';
   export let sort = 'updated';
   export let status = 'all';
+  export let loading = false;
 </script>
 
 <div class="flex flex-wrap items-end gap-3">
@@ -50,7 +51,7 @@
     </Button>
   </div>
 
-  <Button variant="secondary" on:click>
+  <Button variant="secondary" {loading} on:click>
     <RotateCcw size={16} />
     Retry
   </Button>

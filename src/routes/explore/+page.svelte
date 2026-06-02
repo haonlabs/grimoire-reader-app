@@ -2,6 +2,7 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page as pageStore } from '$app/stores';
+  import MangaCard from '$lib/components/manga/MangaCard.svelte';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
   import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
   import Button from '$lib/components/ui/Button.svelte';
@@ -35,6 +36,7 @@
   let activeController: AbortController | undefined;
   let activeTimeout: number | undefined;
   let recoveryTimer: number | undefined;
+  let pendingPage: number | null = null;
   let formatTab = 'Manhwa';
   let updateTab = 'Project';
 
@@ -80,6 +82,7 @@
 
   async function setExplorePage(nextPage: number) {
     const targetPage = Math.max(1, nextPage);
+    pendingPage = targetPage;
     window.scrollTo({ top: 0, behavior: 'auto' });
     await goto(pageUrl(targetPage), {
       keepFocus: true,
@@ -125,6 +128,7 @@
       if (activeTimeout) window.clearTimeout(activeTimeout);
       if (activeController === controller) activeController = undefined;
       if (currentRequest === requestId) loading = false;
+      if (currentRequest === requestId) pendingPage = null;
     }
   }
 
@@ -221,10 +225,10 @@
       {/each}
     </Select>
   </label>
-  <FilterPanel bind:view bind:sort bind:status on:click={() => setExplorePage(1)} />
+  <FilterPanel bind:view bind:sort bind:status {loading} on:click={() => setExplorePage(1)} />
 </Card>
 
-{#if recommended.length}
+{#if requestedPage === 1 && recommended.length}
   <section class="mb-8">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <h2 class="text-xl font-bold text-white">Rekomendasi</h2>
@@ -243,20 +247,7 @@
     </div>
     <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
       {#each recommended as manga (manga.id)}
-        <a class="group relative aspect-[2/3] overflow-hidden rounded-lg bg-[#141416] text-white" href={`/manga/${manga.sourceId}/${manga.id}`}>
-          {#if manga.coverUrl}
-            <img class="h-full w-full object-cover transition group-hover:scale-105" src={proxiedImageUrl(manga.coverUrl)} alt={manga.title} loading="eager" decoding="async" />
-          {:else}
-            <Skeleton class="h-full w-full rounded-none" />
-          {/if}
-          <span class="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
-            {mangaFormatLabel(manga)}
-          </span>
-          <span class="absolute right-2 top-2 max-w-[calc(100%-5.5rem)] truncate rounded-full bg-violet-600/90 px-2 py-1 text-[11px] font-bold text-white">
-            {sourceNames[manga.sourceId] ?? manga.sourceId}
-          </span>
-          <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 via-60% to-transparent px-3 pb-3 pt-12 text-sm font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">{manga.title}</span>
-        </a>
+        <MangaCard {manga} sourceName={sourceNames[manga.sourceId]} />
       {/each}
     </div>
   </section>
@@ -306,6 +297,7 @@
       <Button
         variant="outline"
         disabled={loading || page <= 1}
+        loading={loading && pendingPage === 1}
         on:click={() => setExplorePage(1)}
       >
         First
@@ -313,21 +305,22 @@
       <Button
         variant="secondary"
         disabled={loading || page <= 1}
+        loading={loading && pendingPage === page - 1}
         on:click={() => setExplorePage(page - 1)}
       >
         Previous
       </Button>
       {#if page > 2}
-        <Button variant="outline" size="sm" disabled={loading} on:click={() => setExplorePage(page - 2)}>{page - 2}</Button>
+        <Button variant="outline" size="sm" disabled={loading} loading={loading && pendingPage === page - 2} on:click={() => setExplorePage(page - 2)}>{page - 2}</Button>
       {/if}
       {#if page > 1}
-        <Button variant="outline" size="sm" disabled={loading} on:click={() => setExplorePage(page - 1)}>{page - 1}</Button>
+        <Button variant="outline" size="sm" disabled={loading} loading={loading && pendingPage === page - 1} on:click={() => setExplorePage(page - 1)}>{page - 1}</Button>
       {/if}
       <span class="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">{loading ? '...' : page}</span>
       {#if hasNextPage}
-        <Button variant="outline" size="sm" disabled={loading} on:click={() => setExplorePage(page + 1)}>{page + 1}</Button>
+        <Button variant="outline" size="sm" disabled={loading} loading={loading && pendingPage === page + 1} on:click={() => setExplorePage(page + 1)}>{page + 1}</Button>
       {/if}
-      <Button disabled={loading || !hasNextPage} on:click={() => setExplorePage(page + 1)}>
+      <Button disabled={loading || !hasNextPage} loading={loading && pendingPage === page + 1} on:click={() => setExplorePage(page + 1)}>
         Next
       </Button>
     </div>

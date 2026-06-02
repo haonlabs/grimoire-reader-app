@@ -1,23 +1,34 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { BookOpen, Star } from 'lucide-svelte';
-  import type { Manga } from '$lib/sources/types';
+  import type { Chapter, Manga } from '$lib/sources/types';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
   import { proxiedImageUrl } from '$lib/utils/image';
+  import { sourceFetch } from '$lib/utils/sourceUnlock';
 
   export let manga: Manga;
   export let compact = false;
   export let sourceName = '';
+  export let showChapterShortcuts = true;
 
   let coverLoaded = false;
   let coverFailed = false;
   let coverElement: HTMLImageElement | undefined;
   let lastCoverUrl = '';
   let coverCheckQueued = false;
+  let chapters: Chapter[] = [];
+  let chaptersLoading = false;
+  let chaptersFailed = false;
+  let chapterLoadKey = '';
+
   $: format = mangaFormatLabel(manga);
   $: sourceLabel = sourceName || manga.sourceId;
   $: coverUrl = manga.coverUrl ?? '';
+  $: mangaHref = `/manga/${manga.sourceId}/${manga.id}`;
+  $: latestChapters = [...chapters]
+    .sort((left, right) => Number(right.number) - Number(left.number))
+    .slice(0, 3);
   $: if (coverUrl !== lastCoverUrl) {
     lastCoverUrl = coverUrl;
     coverLoaded = false;
@@ -35,13 +46,34 @@
     if (coverElement.naturalWidth > 0) coverLoaded = true;
     else coverFailed = true;
   }
+
+  async function loadChapterShortcuts() {
+    const key = `${manga.sourceId}:${manga.id}`;
+    if (!showChapterShortcuts || chapterLoadKey === key) return;
+    chapterLoadKey = key;
+    chapters = [];
+    chaptersFailed = false;
+    chaptersLoading = true;
+
+    try {
+      const response = await sourceFetch(fetch, manga.sourceId, `/api/${manga.sourceId}/manga/${manga.id}/chapters`);
+      if (!response.ok) throw new Error('Unable to load chapters');
+      chapters = await response.json();
+    } catch {
+      chaptersFailed = true;
+    } finally {
+      chaptersLoading = false;
+    }
+  }
+
+  onMount(loadChapterShortcuts);
 </script>
 
-<a
+<article
   class="group block overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft dark:border-white/10 dark:bg-[#141416]"
-  href={`/manga/${manga.sourceId}/${manga.id}`}
 >
-  <div class="relative aspect-[2/3] bg-ink/10 dark:bg-white/10">
+  <a class="block" href={mangaHref} aria-label={manga.title}>
+    <div class="relative aspect-[2/3] bg-ink/10 dark:bg-white/10">
     {#if manga.coverUrl && !coverFailed}
       {#if !coverLoaded}
         <Skeleton class="absolute inset-0 rounded-none" />
@@ -75,7 +107,8 @@
         {manga.title}
       </h3>
     </div>
-  </div>
+    </div>
+  </a>
   <div class="space-y-2 p-3">
     <div class="flex flex-wrap items-center gap-2 text-xs text-ink/60 dark:text-white/60">
       <span class="truncate rounded-full bg-ink/5 px-2 py-1 capitalize dark:bg-white/10">{manga.status}</span>
@@ -97,5 +130,26 @@
         {/each}
       </div>
     {/if}
+    {#if showChapterShortcuts}
+      <div class="grid gap-1.5 pt-1">
+        {#if latestChapters.length}
+          {#each latestChapters as chapter}
+            <a
+              class="focus-ring flex min-h-8 items-center justify-between gap-2 rounded-md border border-ink/10 bg-ink/[0.03] px-2 text-xs font-semibold text-ink/75 transition hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70 dark:hover:text-white"
+              href={`/manga/${manga.sourceId}/${manga.id}/${chapter.id}`}
+            >
+              <span class="truncate">{chapter.title || `Chapter ${chapter.number}`}</span>
+              <span class="shrink-0 text-[11px] text-ink/45 dark:text-white/45">Baca</span>
+            </a>
+          {/each}
+        {:else if chaptersLoading}
+          {#each Array(3) as _}
+            <Skeleton class="h-8 rounded-md" />
+          {/each}
+        {:else if !chaptersFailed}
+          <p class="rounded-md border border-ink/10 px-2 py-2 text-xs text-ink/45 dark:border-white/10 dark:text-white/45">Belum ada chapter.</p>
+        {/if}
+      </div>
+    {/if}
   </div>
-</a>
+</article>
