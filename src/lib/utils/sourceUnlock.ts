@@ -2,8 +2,8 @@ import { browser } from '$app/environment';
 import { readLocalJson, writeLocalJson } from '$lib/utils/localStorage';
 
 const STORAGE_KEY = 'manga_source_unlock_cookies';
-const API_CACHE_PREFIX = 'grimoire_api_cache:';
-const API_CACHE_INDEX_KEY = 'grimoire_api_cache_index';
+const API_CACHE_PREFIX = 'grimoire_api_cache_v2:';
+const API_CACHE_INDEX_KEY = 'grimoire_api_cache_v2_index';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 const MAX_API_CACHE_ENTRIES = 120;
 const MAX_API_CACHE_BYTES = 4_000_000;

@@ -115,7 +115,12 @@ function pageUrl(value?: string | null) {
   const url = absoluteUrl(SITE_BASE, clean(value));
   if (!url) return '';
   try {
-    return new URL(url).toString();
+    const parsed = new URL(url);
+    if (parsed.hostname === 'cdn.manhwature.com' && parsed.pathname.startsWith('/desu.photos/')) {
+      parsed.hostname = 'desu.photos';
+      parsed.pathname = parsed.pathname.replace(/^\/desu\.photos/, '');
+    }
+    return parsed.toString();
   } catch {
     return url;
   }

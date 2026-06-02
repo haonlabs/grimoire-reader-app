@@ -70,6 +70,9 @@ interface AsuraListResponse {
 
 interface AsuraDetailResponse {
   series?: AsuraSeries;
+  data?: {
+    series?: AsuraSeries;
+  };
 }
 
 interface AsuraChaptersResponse {
@@ -163,6 +166,10 @@ function uniqueClean(values: Array<string | undefined>) {
   return [...new Set(values.map(clean).filter(Boolean))];
 }
 
+function seriesFromDetailResponse(data: AsuraDetailResponse) {
+  return data.series ?? data.data?.series ?? null;
+}
+
 export class AsuraScansSource implements MangaSource {
   readonly id = 'asurascans';
   readonly name = 'Asura Scans';
@@ -196,16 +203,17 @@ export class AsuraScansSource implements MangaSource {
     const slug = slugFromMangaId(mangaId);
     const raw = await this.fetch(new URL(`/api/series/${slug}`, API_ORIGIN).toString());
     const data = JSON.parse(raw) as AsuraDetailResponse;
-    if (!data.series) {
+    const series = seriesFromDetailResponse(data);
+    if (!series) {
       throw Object.assign(new Error('Asura series not found'), { status: 404, code: 'SOURCE_NOT_FOUND' });
     }
-    const manga = seriesFromApi(this.id, data.series);
+    const manga = seriesFromApi(this.id, series);
     return {
       ...manga,
       id: mangaId,
       alternateTitles: uniqueClean([
-        ...(data.series.alt_titles?.map(clean).filter(Boolean) ?? []),
-        ...clean(data.series.alternative_titles)
+        ...(series.alt_titles?.map(clean).filter(Boolean) ?? []),
+        ...clean(series.alternative_titles)
           .split('•')
           .map(clean)
           .filter(Boolean)

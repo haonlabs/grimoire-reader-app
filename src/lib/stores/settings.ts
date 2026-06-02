@@ -38,15 +38,33 @@ export const defaultSettings: UserSettings = {
 };
 
 export const settings = localStore<UserSettings>('manga_settings', defaultSettings);
+export const nativeSourceIds = [
+  'asurascans',
+  'mangadex',
+  'mangaplus',
+  'crotpedia',
+  'doujinpoi',
+  'dojinpoi',
+  'doujindesu',
+  'komiku',
+  'shinigami',
+  'komikcast',
+  'komiktap'
+];
 export const defaultEnabledSources = ['shinigami'];
 export const enabledSources = localStore<string[]>('manga_sources_enabled', defaultEnabledSources);
 
 if (browser) {
-  enabledSources.update((items) => [...new Set(items.length ? items : defaultEnabledSources)]);
+  enabledSources.update((items) => {
+    const filtered = [...new Set(items.length ? items : defaultEnabledSources)].filter((id) =>
+      nativeSourceIds.includes(id)
+    );
+    return filtered.length ? filtered : defaultEnabledSources;
+  });
   settings.update((value) => ({
     ...value,
     uiLanguage: value.uiLanguage === 'en' ? 'id' : value.uiLanguage,
-    defaultSourceId: value.defaultSourceId === 'mangadex' ? 'shinigami' : value.defaultSourceId,
+    defaultSourceId: nativeSourceIds.includes(value.defaultSourceId) ? value.defaultSourceId : 'shinigami',
     reader: {
       ...value.reader,
       mode: 'vertical',

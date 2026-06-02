@@ -18,7 +18,7 @@ describe('Indonesian source adapters', () => {
     const filters = await source.getFilters();
 
     expect(source.id).toBe('shinigami');
-    expect(source.baseUrl).toBe('https://shinigami.cv');
+    expect(source.baseUrl).toBe('https://g.shinigami.asia');
     expect(filters.map((filter) => filter.id)).toEqual(['sort']);
   });
 

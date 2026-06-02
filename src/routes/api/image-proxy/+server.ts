@@ -2,15 +2,12 @@ import { error } from '@sveltejs/kit';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import sharp from 'sharp';
 import { sourceDomains } from '$lib/sources/registry';
 
 const IMAGE_TIMEOUT = 15_000;
 const CACHE_VERSION = 'v2';
 const CACHE_DIR = path.join(process.cwd(), '.cache', 'image-proxy');
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
-const MANGAFIRE_PIECE_SIZE = 200;
-const MANGAFIRE_MIN_SPLIT_COUNT = 5;
 
 interface CachedImageMeta {
   url: string;
@@ -22,15 +19,6 @@ function xorDecrypt(bytes: Uint8Array, hexKey: string) {
   const key = hexKey.match(/.{1,2}/g)?.map((part) => Number.parseInt(part, 16)) ?? [];
   if (!key.length || key.some((byte) => Number.isNaN(byte))) return bytes;
   return bytes.map((byte, index) => byte ^ key[index % key.length]);
-}
-
-function ceilDiv(value: number, divisor: number) {
-  return Math.ceil(value / divisor);
-}
-
-function scrambledOffset(hash: string) {
-  const match = /^#scrambled_(\d+)$/.exec(hash);
-  return match ? Number.parseInt(match[1], 10) : 0;
 }
 
 function mangadexDataSaverFallback(target: URL) {
@@ -45,50 +33,14 @@ function mangadexDataSaverFallback(target: URL) {
   return null;
 }
 
-async function descrambleMangaFireImage(bytes: Uint8Array, offset: number) {
-  const source = sharp(Buffer.from(bytes), { animated: false });
-  const metadata = await source.metadata();
-  const width = metadata.width ?? 0;
-  const height = metadata.height ?? 0;
-  if (!width || !height || offset < 1) return null;
-
-  const pieceWidth = Math.min(MANGAFIRE_PIECE_SIZE, ceilDiv(width, MANGAFIRE_MIN_SPLIT_COUNT));
-  const pieceHeight = Math.min(MANGAFIRE_PIECE_SIZE, ceilDiv(height, MANGAFIRE_MIN_SPLIT_COUNT));
-  const xMax = ceilDiv(width, pieceWidth) - 1;
-  const yMax = ceilDiv(height, pieceHeight) - 1;
-  const composite: sharp.OverlayOptions[] = [];
-
-  for (let y = 0; y <= yMax; y += 1) {
-    for (let x = 0; x <= xMax; x += 1) {
-      const left = pieceWidth * x;
-      const top = pieceHeight * y;
-      const tileWidth = Math.min(pieceWidth, width - left);
-      const tileHeight = Math.min(pieceHeight, height - top);
-      const sourceX = pieceWidth * (x === xMax || xMax === 0 ? x : (xMax - x + offset) % xMax);
-      const sourceY = pieceHeight * (y === yMax || yMax === 0 ? y : (yMax - y + offset) % yMax);
-
-      composite.push({
-        input: await source
-          .clone()
-          .extract({ left: sourceX, top: sourceY, width: tileWidth, height: tileHeight })
-          .toBuffer(),
-        left,
-        top
-      });
-    }
+function unwrapDoujinpoiImageCdn(target: URL) {
+  if (target.hostname === 'cdn.manhwature.com' && target.pathname.startsWith('/desu.photos/')) {
+    const fallback = new URL(target);
+    fallback.hostname = 'desu.photos';
+    fallback.pathname = target.pathname.replace(/^\/desu\.photos/, '');
+    return fallback;
   }
-
-  return sharp({
-    create: {
-      width,
-      height,
-      channels: 4,
-      background: { r: 255, g: 255, b: 255, alpha: 1 }
-    }
-  })
-    .composite(composite)
-    .webp({ quality: 95 })
-    .toBuffer();
+  return target;
 }
 
 function allowedImageHost(hostname: string) {
@@ -104,8 +56,6 @@ function allowedImageHost(hostname: string) {
     hostname === 'assets.shngm.id' ||
     hostname === 'storage.shngm.id' ||
     hostname === 'jumpg-assets.tokyo-cdn.com' ||
-    hostname === 'static.mfcdn.nl' ||
-    hostname.endsWith('.mfcdn.nl') ||
     hostname === 'thumbnail.komiku.org' ||
     hostname === 'img.komiku.org' ||
     hostname.endsWith('.komiku.org') ||
@@ -122,34 +72,7 @@ function allowedImageHost(hostname: string) {
     hostname === 'img.manhwaland.email' ||
     hostname === 'cover.eromanga.cfd' ||
     hostname === 'reader.eromanga.cfd' ||
-    hostname.endsWith('.eromanga.cfd') ||
-    hostname.endsWith('.bato.to') ||
-    hostname.endsWith('.wto.to') ||
-    hostname.endsWith('.fto.to') ||
-    hostname.endsWith('.hto.to') ||
-    hostname.endsWith('.mto.to') ||
-    hostname.endsWith('.dto.to') ||
-    hostname.endsWith('.jto.to') ||
-    hostname.endsWith('.mangatoto.com') ||
-    hostname.endsWith('.mangatoto.net') ||
-    hostname.endsWith('.mangatoto.org') ||
-    hostname.endsWith('.batocomic.com') ||
-    hostname.endsWith('.batocomic.net') ||
-    hostname.endsWith('.batocomic.org') ||
-    hostname.endsWith('.batotoo.com') ||
-    hostname.endsWith('.batotwo.com') ||
-    hostname.endsWith('.battwo.com') ||
-    hostname.endsWith('.comiko.net') ||
-    hostname.endsWith('.comiko.org') ||
-    hostname.endsWith('.readtoto.com') ||
-    hostname.endsWith('.readtoto.net') ||
-    hostname.endsWith('.readtoto.org') ||
-    hostname.endsWith('.xbato.com') ||
-    hostname.endsWith('.xbato.net') ||
-    hostname.endsWith('.xbato.org') ||
-    hostname.endsWith('.zbato.com') ||
-    hostname.endsWith('.zbato.net') ||
-    hostname.endsWith('.zbato.org')
+    hostname.endsWith('.eromanga.cfd')
   );
 }
 
@@ -169,6 +92,7 @@ function imageResponse(bytes: Uint8Array, contentType: string, cacheStatus: 'HIT
   return new Response(Buffer.from(bytes), {
     headers: {
       'content-type': contentType,
+      'content-length': String(bytes.byteLength),
       'cache-control': CACHE_CONTROL,
       'x-image-cache': cacheStatus
     }
@@ -220,17 +144,18 @@ export async function GET({ url, fetch }) {
   const cached = await readCachedImage(raw);
   if (cached) return cached;
 
+  const imageTarget = unwrapDoujinpoiImageCdn(target);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT);
-  let response = await fetch(target, {
+  let response = await fetch(imageTarget, {
     headers: {
-      Referer: `${target.origin}/`,
+      Referer: `${imageTarget.origin}/`,
       'User-Agent': 'GrimoireReader/0.1'
     },
     signal: controller.signal
   }).finally(() => clearTimeout(timer));
 
-  const mangaDexFallback = !response.ok ? mangadexDataSaverFallback(target) : null;
+  const mangaDexFallback = !response.ok ? mangadexDataSaverFallback(imageTarget) : null;
   if (mangaDexFallback) {
     response = await fetch(mangaDexFallback, {
       headers: {
@@ -248,17 +173,8 @@ export async function GET({ url, fetch }) {
   let bytes = Buffer.from(await response.arrayBuffer());
   let outputContentType = contentType;
 
-  if (target.hostname === 'jumpg-assets.tokyo-cdn.com' && target.hash.length > 1) {
-    bytes = Buffer.from(xorDecrypt(bytes, target.hash.slice(1)));
-  }
-
-  const mangafireOffset = scrambledOffset(target.hash);
-  if (mangafireOffset > 0 && (target.hostname === 'static.mfcdn.nl' || target.hostname.endsWith('.mfcdn.nl'))) {
-    const descrambled = await descrambleMangaFireImage(bytes, mangafireOffset);
-    if (descrambled) {
-      bytes = Buffer.from(descrambled);
-      outputContentType = 'image/webp';
-    }
+  if (imageTarget.hostname === 'jumpg-assets.tokyo-cdn.com' && imageTarget.hash.length > 1) {
+    bytes = Buffer.from(xorDecrypt(bytes, imageTarget.hash.slice(1)));
   }
 
   await writeCachedImage(raw, bytes, outputContentType);

@@ -43,6 +43,7 @@
     ? $settings.defaultSourceId
     : (sources[0]?.id ?? 'shinigami');
   $: sourceName = sources.find((source) => source.id === sourceId)?.name ?? sourceId;
+  $: sourceNames = Object.fromEntries(sources.map((source) => [source.id, source.name]));
   $: requestedPage = Math.max(1, Number($pageStore.url.searchParams.get('page') ?? 1));
   $: visibleItems = status === 'all' ? items : items.filter((item) => item.status === status);
   $: hero = featured[0] ?? visibleItems[0];
@@ -141,7 +142,7 @@
     if (sources.length) loadList(requestedPage);
     else {
       loading = false;
-      error = 'Belum ada source yang ditambahkan. Buka Profile > All Series untuk add source.';
+      error = 'Belum ada source yang ditambahkan. Buka Profile > Source Manager untuk menambahkan source.';
     }
     recoveryTimer = window.setInterval(recoverStuckLoading, 2_000);
     window.addEventListener('pageshow', recoverStuckLoading);
@@ -251,6 +252,9 @@
           <span class="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
             {mangaFormatLabel(manga)}
           </span>
+          <span class="absolute right-2 top-2 max-w-[calc(100%-5.5rem)] truncate rounded-full bg-violet-600/90 px-2 py-1 text-[11px] font-bold text-white">
+            {sourceNames[manga.sourceId] ?? manga.sourceId}
+          </span>
           <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3 text-sm font-semibold">{manga.title}</span>
         </a>
       {/each}
@@ -290,7 +294,7 @@
           </div>
         </div>
       </div>
-      <MangaGrid items={updateItems} {view} />
+      <MangaGrid items={updateItems} {view} {sourceNames} />
     </section>
   {:else}
     <Card class="border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">

@@ -18,7 +18,6 @@
   let query = '';
   let language = 'all';
   let rating = 'all';
-  let parser = 'all';
   let tab: 'all' | 'added' | 'available' = 'all';
   let unlockSource: SourceMetadata | undefined;
   let unlockCookie = '';
@@ -37,18 +36,13 @@
     const matchesText = haystack.includes(query.trim().toLowerCase());
     const matchesLanguage = language === 'all' || source.language === language;
     const matchesRating = rating === 'all' || source.contentRating === rating;
-    const matchesParser =
-      parser === 'all' ||
-      (parser === 'ready' && source.parserKind === 'native') ||
-      (parser === 'generic' && source.parserKind === 'generic') ||
-      (parser === 'pending' && source.isImplemented === false);
     const matchesTab =
       tab === 'all' ||
       (tab === 'added' && $enabledSources.includes(source.id)) ||
       (tab === 'available' && !$enabledSources.includes(source.id));
-    return matchesText && matchesLanguage && matchesRating && matchesParser && matchesTab;
+    return matchesText && matchesLanguage && matchesRating && matchesTab;
   });
-  $: filterKey = `${query.trim().toLowerCase()}:${language}:${rating}:${parser}:${tab}:${$enabledSources.join(',')}`;
+  $: filterKey = `${query.trim().toLowerCase()}:${language}:${rating}:${tab}:${$enabledSources.join(',')}`;
   $: if (filterKey !== lastFilterKey) {
     lastFilterKey = filterKey;
     visibleLimit = SOURCE_BATCH_SIZE;
@@ -120,7 +114,7 @@
   <p class="text-sm font-semibold uppercase tracking-wide text-violet-300">Source Manager</p>
   <h1 class="mt-1 text-3xl font-extrabold text-white">Sources</h1>
   <p class="mt-1 text-sm text-white/55">
-    Cari source seperti Kotatsu, add/remove dari katalog, lalu jadikan parser aktif sebagai default.
+    Add/remove source native yang sudah stabil, lalu jadikan salah satunya sebagai default.
   </p>
 
   <div class="mt-4 grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-black/20 p-1">
@@ -165,12 +159,6 @@
       <option class="bg-ink" value="suggestive">Suggestive</option>
       <option class="bg-ink" value="explicit">Explicit</option>
     </Select>
-    <Select class="h-11" bind:value={parser}>
-      <option class="bg-ink" value="all">All parsers</option>
-      <option class="bg-ink" value="ready">Native</option>
-      <option class="bg-ink" value="generic">Generic</option>
-      <option class="bg-ink" value="pending">Catalog only</option>
-    </Select>
   </div>
   <p class="mt-3 text-xs text-white/45">
     Menampilkan {visible.length} dari {matchingSources.length} source cocok.
@@ -188,10 +176,6 @@
             <p class="text-xs text-white/55">{source.method} · {source.language} · {source.contentRating}</p>
             {#if activeSource === source.id}
               <span class="mt-2 inline-flex rounded-full bg-violet-500/15 px-2 py-1 text-[11px] font-semibold text-violet-200">Default</span>
-            {:else if source.isImplemented === false}
-              <span class="mt-2 inline-flex rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white/55">Catalog only</span>
-            {:else if source.parserKind === 'generic'}
-              <span class="mt-2 inline-flex rounded-full bg-sky-500/15 px-2 py-1 text-[11px] font-semibold text-sky-200">Generic</span>
             {:else}
               <span class="mt-2 inline-flex rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-200">Native</span>
             {/if}

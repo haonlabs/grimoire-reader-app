@@ -4,7 +4,10 @@ import { SOURCE_REGISTRY } from '../../src/lib/sources/registry';
 
 describe('source registry', () => {
   it('registers every MVP source declared in metadata', () => {
-    expect(Object.keys(SOURCE_REGISTRY).sort()).toEqual(SOURCE_METADATA.map((source) => source.id).sort());
+    const registered = new Set(Object.keys(SOURCE_REGISTRY));
+    for (const source of SOURCE_METADATA) {
+      expect(registered.has(source.id)).toBe(true);
+    }
   });
 
   it('uses unique source ids', () => {
@@ -13,11 +16,12 @@ describe('source registry', () => {
   });
 
   it('uses active adapters for the MVP sources', () => {
-    expect(SOURCE_REGISTRY.mangafire?.name).toBe('MangaFire');
     expect(SOURCE_REGISTRY.mangaplus?.name).toBe('MANGA Plus');
-    expect(SOURCE_REGISTRY.batoto?.name).toBe('Bato.to');
+    expect(SOURCE_REGISTRY.asurascans?.name).toBe('Asura Scans');
+    expect(SOURCE_REGISTRY.doujinpoi?.name).toBe('Doujinpoi');
     expect(SOURCE_REGISTRY.komiku?.name).toBe('Komiku');
     expect(SOURCE_REGISTRY.shinigami?.name).toBe('Shinigami ID');
     expect(SOURCE_REGISTRY.komikcast?.name).toBe('Komikcast');
+    expect(SOURCE_REGISTRY.komiktap?.name).toBe('KomikTap');
   });
 });

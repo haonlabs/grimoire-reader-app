@@ -21,7 +21,7 @@
     { href: '/library', label: 'Library', icon: Bookmark, description: 'Readlist dan koleksi lokal' },
     { href: '/history', label: 'History', icon: Clock, description: 'Lanjutkan chapter terakhir' },
     { href: '/updates', label: 'Updates', icon: Bell, description: 'Chapter baru dari library' },
-    { href: '/sources', label: 'All Series', icon: SlidersHorizontal, description: 'Kelola semua source' },
+    { href: '/sources', label: 'Source Manager', icon: SlidersHorizontal, description: 'Tambah, hapus, dan pilih source default' },
     { href: '/settings', label: 'Settings', icon: Settings, description: 'Preferensi reader dan aplikasi' }
   ];
 

@@ -8,6 +8,7 @@
 
   export let manga: Manga;
   export let compact = false;
+  export let sourceName = '';
 
   let coverLoaded = false;
   let coverFailed = false;
@@ -15,6 +16,7 @@
   let lastCoverUrl = '';
   let coverCheckQueued = false;
   $: format = mangaFormatLabel(manga);
+  $: sourceLabel = sourceName || manga.sourceId;
   $: coverUrl = manga.coverUrl ?? '';
   $: if (coverUrl !== lastCoverUrl) {
     lastCoverUrl = coverUrl;
@@ -65,6 +67,9 @@
     <span class="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-soft">
       {format}
     </span>
+    <span class="absolute right-2 top-2 max-w-[calc(100%-5.5rem)] truncate rounded-full bg-violet-600/90 px-2 py-1 text-[11px] font-bold text-white shadow-soft">
+      {sourceLabel}
+    </span>
     <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-3 text-white">
       <h3 class="line-clamp-2 min-h-10 text-sm font-semibold leading-5">
         {manga.title}
@@ -75,6 +80,7 @@
     <div class="flex flex-wrap items-center gap-2 text-xs text-ink/60 dark:text-white/60">
       <span class="truncate rounded-full bg-ink/5 px-2 py-1 capitalize dark:bg-white/10">{manga.status}</span>
       <span class="shrink-0 rounded-full bg-violet-500/15 px-2 py-1 font-semibold text-violet-200">{format}</span>
+      <span class="max-w-full truncate rounded-full bg-ink/5 px-2 py-1 font-semibold text-ink/70 dark:bg-white/10 dark:text-white/70">{sourceLabel}</span>
       {#if manga.rating}
         <span class="inline-flex items-center gap-1">
           <Star size={13} class="fill-gold text-gold" />

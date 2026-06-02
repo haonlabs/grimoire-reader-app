@@ -8,9 +8,7 @@
     Bookmark,
     Clock,
     Compass,
-    Crown,
     Home,
-    Settings,
     SlidersHorizontal,
     Sparkles,
     UserCircle
@@ -23,11 +21,10 @@
     { href: '/library', label: 'Library', icon: Bookmark },
     { href: '/history', label: 'History', icon: Clock },
     { href: '/updates', label: 'Updates', icon: Bell },
-    { href: '/sources', label: 'All Series', icon: SlidersHorizontal },
-    { href: '/settings', label: 'Settings', icon: Settings }
+    { href: '/sources', label: 'Source Manager', icon: SlidersHorizontal }
   ];
   const mobileNav = nav.filter((item) =>
-    ['Home', 'Explore', 'Library', 'All Series'].includes(item.label)
+    ['Home', 'Explore', 'Library', 'Source Manager'].includes(item.label)
   );
 
   $: path = $page.url.pathname;
@@ -71,13 +68,6 @@
         {:else}
           <SearchBar {activeSource} />
         {/if}
-        <a
-          class="focus-ring grid h-10 w-10 shrink-0 place-items-center rounded-full bg-violet-600 text-white"
-          href="/settings"
-          title="Upgrade settings"
-        >
-          <Crown size={18} />
-        </a>
         <a
           class="focus-ring grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/10 text-white"
           href="/profile"

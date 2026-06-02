@@ -1,6 +1,4 @@
 import type { SourceMetadata } from './types';
-import { KOTATSU_SOURCE_CATALOG } from './kotatsuCatalog';
-
 const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
   {
     id: 'asurascans',
@@ -25,37 +23,15 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     icon: 'MD'
   },
   {
-    id: 'mangafire',
-    name: 'MangaFire',
-    description: 'English manga source using the MangaFire HTML catalog and AJAX reader endpoints.',
-    language: 'en',
-    baseUrl: 'https://mangafire.to',
-    contentRating: 'suggestive',
-    isNsfw: false,
-    method: 'Scraping + API',
-    icon: 'MF'
-  },
-  {
     id: 'mangaplus',
     name: 'MangaPlus',
-    description: 'Official Shueisha catalog using the same MANGA Plus web API shape as Kotatsu.',
+    description: 'Katalog resmi Shueisha untuk membaca chapter MANGA Plus yang tersedia secara publik.',
     language: 'en/ja',
     baseUrl: 'https://mangaplus.shueisha.co.jp',
     contentRating: 'safe',
     isNsfw: false,
     method: 'Unofficial API',
     icon: 'M+'
-  },
-  {
-    id: 'batoto',
-    name: 'Bato.to',
-    description: 'Large multilingual community source using Bato browse/detail selectors.',
-    language: 'multi',
-    baseUrl: 'https://wto.to',
-    contentRating: 'suggestive',
-    isNsfw: false,
-    method: 'Scraping',
-    icon: 'BT'
   },
   {
     id: 'crotpedia',
@@ -71,7 +47,7 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
   {
     id: 'doujindesu',
     name: 'DoujinDesu.tv',
-    description: 'Indonesian explicit source ported directly from the Kotatsu DoujinDesu parser flow.',
+    description: 'Source eksplisit berbahasa Indonesia dengan daftar judul, detail, dan halaman baca dari DoujinDesu.',
     language: 'id',
     baseUrl: 'https://doujindesu.tv',
     contentRating: 'explicit',
@@ -126,7 +102,7 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
   {
     id: 'komiktap',
     name: 'KomikTap',
-    description: 'Indonesian source ported from Kotatsu MangaReaderParser with KomikTap page parsing.',
+    description: 'Source komik Indonesia dengan katalog, pencarian, detail chapter, dan halaman baca dari KomikTap.',
     language: 'id',
     baseUrl: 'https://komiktap.info',
     contentRating: 'suggestive',
@@ -136,4 +112,4 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
   }
 ];
 
-export const SOURCE_METADATA: SourceMetadata[] = [...IMPLEMENTED_SOURCE_METADATA, ...KOTATSU_SOURCE_CATALOG];
+export const SOURCE_METADATA: SourceMetadata[] = IMPLEMENTED_SOURCE_METADATA;

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { SOURCE_METADATA } from '$lib/sources/metadata';
-import { isUsableSourceUrl, SOURCE_REGISTRY } from '$lib/sources/registry';
+import { SOURCE_REGISTRY } from '$lib/sources/registry';
 
 export async function GET() {
   const health = await Promise.all(
@@ -14,17 +14,13 @@ export async function GET() {
   return json(
     SOURCE_METADATA.map((source) => {
       const isNative = source.id in SOURCE_REGISTRY;
-      const hasGenericParser = isUsableSourceUrl(source.baseUrl);
       return {
         ...source,
-        baseUrl: hasGenericParser || isNative ? source.baseUrl : '',
-        isImplemented: isNative || hasGenericParser,
-        parserKind: isNative ? 'native' : hasGenericParser ? 'generic' : 'catalog',
+        isImplemented: isNative,
+        parserKind: 'native',
         health: healthMap[source.id] ?? {
-          status: hasGenericParser ? 'online' : 'limited',
-          message: hasGenericParser
-            ? 'Generic Kotatsu parser, dicek saat source dibuka'
-            : 'Ada di katalog Kotatsu, tapi domain belum terdeteksi'
+          status: 'limited',
+          message: 'Native parser belum aktif'
         }
       };
     }),

@@ -30,6 +30,7 @@
     mode === 'all'
       ? implementedSources
       : implementedSources.filter((item) => item.id === source);
+  $: sourceNames = Object.fromEntries(implementedSources.map((item) => [item.id, item.name]));
 
   async function runSearch() {
     const selected = activeSources;
@@ -103,7 +104,7 @@
       {:else if loading[sourceMeta.id] && !results[sourceMeta.id]?.items?.length}
         <MangaGridSkeleton count={6} />
       {:else if results[sourceMeta.id]?.items?.length}
-        <MangaGrid items={results[sourceMeta.id].items} />
+        <MangaGrid items={results[sourceMeta.id].items} {sourceNames} />
       {:else}
         <div class="rounded-lg border border-white/10 bg-[#111116] p-4 text-sm text-white/55">
           No results yet.

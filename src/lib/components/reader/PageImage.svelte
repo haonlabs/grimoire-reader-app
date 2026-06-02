@@ -15,7 +15,6 @@
   let loading = false;
   let currentSrc = '';
   let displaySrc = '';
-  let objectUrl = '';
   let progress: number | undefined = undefined;
   let progressController: AbortController | undefined;
   let progressToken = 0;
@@ -48,8 +47,6 @@
     progressController = undefined;
     progressToken += 1;
     loading = false;
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = '';
   }
 
   async function loadImageWithProgress() {
@@ -71,13 +68,11 @@
 
       const contentLength = Number(response.headers.get('content-length')) || 0;
       const reader = response.body.getReader();
-      const chunks: Uint8Array[] = [];
       let received = 0;
 
       while (true) {
         const next = await reader.read();
         if (next.done) break;
-        chunks.push(next.value);
         received += next.value.length;
         if (contentLength > 0 && token === progressToken) {
           progress = Math.max(1, Math.min(99, Math.round((received / contentLength) * 100)));
@@ -85,21 +80,12 @@
       }
 
       if (token !== progressToken) return;
-      const type = response.headers.get('content-type') || 'image/jpeg';
-      const bytes = new Uint8Array(received);
-      let offset = 0;
-      for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.length;
-      }
-      const blob = new Blob([bytes.buffer as ArrayBuffer], { type });
-      objectUrl = URL.createObjectURL(blob);
-      displaySrc = objectUrl;
+      displaySrc = proxiedSrc;
       progress = 100;
     } catch (error) {
       if (token !== progressToken || controller.signal.aborted) return;
-      failed = true;
-      dispatch('error', { index });
+      progress = undefined;
+      displaySrc = proxiedSrc;
     } finally {
       if (progressController === controller) progressController = undefined;
       if (token === progressToken) loading = false;

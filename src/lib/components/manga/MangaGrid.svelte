@@ -8,6 +8,7 @@
 
   export let items: Manga[] = [];
   export let view: 'grid' | 'list' = 'grid';
+  export let sourceNames: Record<string, string> = {};
 
   let preloadKey = '';
   let stopImagePreload: () => void = () => {};
@@ -25,7 +26,7 @@
 {#if view === 'grid'}
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
     {#each items as manga (manga.sourceId + manga.id)}
-      <MangaCard {manga} />
+      <MangaCard {manga} sourceName={sourceNames[manga.sourceId]} />
     {/each}
   </div>
 {:else}
@@ -55,6 +56,7 @@
           <p class="mt-1 line-clamp-2 text-sm text-ink/60 dark:text-white/60">{manga.description}</p>
           <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink/55 dark:text-white/55">
             <span class="rounded-full bg-violet-500/15 px-2 py-1 font-semibold text-violet-200">{mangaFormatLabel(manga)}</span>
+            <span class="rounded-full bg-ink/5 px-2 py-1 font-semibold dark:bg-white/10">{sourceNames[manga.sourceId] ?? manga.sourceId}</span>
             <span class="rounded-full bg-ink/5 px-2 py-1 capitalize dark:bg-white/10">{manga.status}</span>
             {#if manga.rating}
               <span class="inline-flex items-center gap-1">
