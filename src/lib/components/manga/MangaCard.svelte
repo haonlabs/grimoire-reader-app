@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { BookOpen, Star } from 'lucide-svelte';
   import type { Chapter, Manga } from '$lib/sources/types';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
@@ -21,6 +21,8 @@
   let chaptersLoading = false;
   let chaptersFailed = false;
   let chapterLoadKey = '';
+  let cardElement: HTMLElement;
+  let chapterObserver: IntersectionObserver | undefined;
 
   $: format = mangaFormatLabel(manga);
   $: sourceLabel = sourceName || manga.sourceId;
@@ -66,14 +68,33 @@
     }
   }
 
-  onMount(loadChapterShortcuts);
+  onMount(() => {
+    if (!showChapterShortcuts || typeof IntersectionObserver === 'undefined') {
+      loadChapterShortcuts();
+      return;
+    }
+
+    chapterObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        chapterObserver?.disconnect();
+        chapterObserver = undefined;
+        loadChapterShortcuts();
+      },
+      { rootMargin: '700px 0px' }
+    );
+    if (cardElement) chapterObserver.observe(cardElement);
+  });
+
+  onDestroy(() => chapterObserver?.disconnect());
 </script>
 
 <article
-  class="group block overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft dark:border-white/10 dark:bg-[#141416]"
+  bind:this={cardElement}
+  class="group flex h-full flex-col overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft dark:border-white/10 dark:bg-[#141416]"
 >
   <a class="block" href={mangaHref} aria-label={manga.title}>
-    <div class="relative aspect-[2/3] bg-ink/10 dark:bg-white/10">
+    <div class="relative aspect-[2/3] w-full shrink-0 overflow-hidden bg-ink/10 dark:bg-white/10">
     {#if manga.coverUrl && !coverFailed}
       {#if !coverLoaded}
         <Skeleton class="absolute inset-0 rounded-none" />
@@ -83,7 +104,7 @@
         class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] {coverLoaded ? 'opacity-100' : 'opacity-0'}"
         src={proxiedImageUrl(manga.coverUrl)}
         alt={manga.title}
-        loading="eager"
+        loading="lazy"
         decoding="async"
         on:load={() => (coverLoaded = true)}
         on:error={() => {
@@ -109,7 +130,7 @@
     </div>
     </div>
   </a>
-  <div class="space-y-2 p-3">
+  <div class="flex flex-1 flex-col space-y-2 p-3">
     <div class="flex flex-wrap items-center gap-2 text-xs text-ink/60 dark:text-white/60">
       <span class="truncate rounded-full bg-ink/5 px-2 py-1 capitalize dark:bg-white/10">{manga.status}</span>
       <span class="shrink-0 rounded-full bg-violet-500/15 px-2 py-1 font-semibold text-violet-200">{format}</span>
@@ -131,7 +152,7 @@
       </div>
     {/if}
     {#if showChapterShortcuts}
-      <div class="grid gap-1.5 pt-1">
+      <div class="grid min-h-[6.5rem] gap-1.5 pt-1">
         {#if latestChapters.length}
           {#each latestChapters as chapter}
             <a
@@ -142,7 +163,7 @@
               <span class="shrink-0 text-[11px] text-ink/45 dark:text-white/45">Baca</span>
             </a>
           {/each}
-        {:else if chaptersLoading}
+        {:else if chaptersLoading || !chapterLoadKey}
           {#each Array(3) as _}
             <Skeleton class="h-8 rounded-md" />
           {/each}
