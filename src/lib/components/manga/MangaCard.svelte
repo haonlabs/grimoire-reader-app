@@ -122,6 +122,25 @@
     dispatch('ready');
   }
 
+  function chapterTimeLabel(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Tanggal tidak ada';
+    const diffMs = Math.max(0, Date.now() - date.getTime());
+    const minute = 60 * 1000;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+    const month = day * 30;
+
+    if (diffMs < minute) return 'baru saja';
+    if (diffMs < hour) return `${Math.floor(diffMs / minute)} menit lalu`;
+    if (diffMs < day) return `${Math.floor(diffMs / hour)} jam lalu`;
+    if (diffMs < week) return `${Math.floor(diffMs / day)} hari lalu`;
+    if (diffMs < month) return `${Math.floor(diffMs / week)} minggu lalu`;
+    if (diffMs <= month) return '1 bulan lalu';
+    return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
   function clearCoverTimer() {
     if (!coverTimer) return;
     clearTimeout(coverTimer);
@@ -201,7 +220,7 @@
               href={`/manga/${manga.sourceId}/${manga.id}/${chapter.id}`}
             >
               <span class="truncate">{chapter.title || `Chapter ${chapter.number}`}</span>
-              <span class="shrink-0 text-[11px] text-ink/45 dark:text-white/45">Baca</span>
+              <span class="shrink-0 text-[11px] text-ink/45 dark:text-white/45">{chapterTimeLabel(chapter.uploadedAt)}</span>
             </a>
           {/each}
         {:else if chaptersLoading || !chapterLoadKey}
