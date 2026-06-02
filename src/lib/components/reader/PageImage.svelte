@@ -7,10 +7,12 @@
   export let src: string;
   export let index: number;
   export let fit: 'width' | 'height' | 'screen' | 'original' = 'width';
+  export let shouldLoad = true;
 
   const dispatch = createEventDispatcher<{ load: { index: number }; error: { index: number } }>();
   let loaded = false;
   let failed = false;
+  let loading = false;
   let currentSrc = '';
   let displaySrc = '';
   let objectUrl = '';
@@ -33,8 +35,11 @@
     currentSrc = src;
     loaded = false;
     failed = false;
+    loading = false;
     displaySrc = '';
     progress = undefined;
+  }
+  $: if (shouldLoad && currentSrc && !loaded && !failed && !loading && !displaySrc) {
     loadImageWithProgress();
   }
 
@@ -42,6 +47,7 @@
     progressController?.abort();
     progressController = undefined;
     progressToken += 1;
+    loading = false;
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = '';
   }
@@ -54,6 +60,7 @@
     const token = progressToken;
     const controller = new AbortController();
     progressController = controller;
+    loading = true;
 
     try {
       const response = await fetch(proxiedSrc, {
@@ -95,6 +102,7 @@
       dispatch('error', { index });
     } finally {
       if (progressController === controller) progressController = undefined;
+      if (token === progressToken) loading = false;
     }
   }
 

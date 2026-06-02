@@ -18,6 +18,7 @@
   let overlayVisible = false;
   let loadedPages: Record<number, true> = {};
   let failedPages: Record<number, true> = {};
+  let loadCursor = 0;
   let pointerStart: { x: number; y: number; time: number } | undefined;
   let readerBody: HTMLDivElement;
   let mounted = false;
@@ -74,10 +75,19 @@
 
   function markLoaded(index: number) {
     loadedPages = { ...loadedPages, [index]: true };
+    advanceLoadCursor(index);
   }
 
   function markFailed(index: number) {
     failedPages = { ...failedPages, [index]: true };
+    advanceLoadCursor(index);
+  }
+
+  function advanceLoadCursor(index: number) {
+    if (index !== loadCursor) return;
+    let next = index + 1;
+    while (loadedPages[next] || failedPages[next]) next += 1;
+    loadCursor = Math.min(next, total);
   }
 
   function getCurrentPosition(): ReaderPosition {
@@ -169,6 +179,7 @@
     overlayVisible = false;
     loadedPages = {};
     failedPages = {};
+    loadCursor = 0;
     mounted = true;
     restorePosition(savedPosition);
     window.addEventListener('scroll', scheduleSavePosition, { passive: true });
@@ -221,6 +232,7 @@
           {src}
           {index}
           {fit}
+          shouldLoad={index === loadCursor}
           on:load={(event) => markLoaded(event.detail.index)}
           on:error={(event) => markFailed(event.detail.index)}
         />
