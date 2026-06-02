@@ -1,6 +1,8 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { ArrowLeft, Bookmark, BookOpen, Check, Eye, RotateCcw, Star, Trophy } from 'lucide-svelte';
   import ChapterList from '$lib/components/manga/ChapterList.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
@@ -66,6 +68,10 @@
   }
 
   function goBack() {
+    if (browser && $page.url.searchParams.get('from') === 'reader') {
+      goto(sessionStorage.getItem('grimoire_last_browse_path') || '/explore', { replaceState: true });
+      return;
+    }
     if (history.length > 1) {
       history.back();
       return;

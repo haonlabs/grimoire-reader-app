@@ -166,7 +166,7 @@
       <div class="grid grid-cols-6 gap-1">
         <a
           class="focus-ring grid place-items-center rounded-md bg-white/10 p-2 transition hover:bg-white/20"
-          href={`/manga/${sourceId}/${mangaId}`}
+          href={`/manga/${sourceId}/${mangaId}?from=reader`}
           title="Home"
         >
           <Home size={20} />

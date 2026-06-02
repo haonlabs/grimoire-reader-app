@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import { navigating, page } from '$app/stores';
   import SearchBar from '$lib/components/ui/SearchBar.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
@@ -29,8 +30,12 @@
 
   $: path = $page.url.pathname;
   $: isReader = /^\/manga\/[^/]+\/[^/]+\/[^/]+$/.test(path);
+  $: isMangaDetail = /^\/manga\/[^/]+\/[^/]+$/.test(path);
   $: isProfile = path === '/profile' || path.startsWith('/profile/');
   $: activeSource = $settings.defaultSourceId;
+  $: if (browser && !isReader && !isMangaDetail) {
+    sessionStorage.setItem('grimoire_last_browse_path', `${$page.url.pathname}${$page.url.search}`);
+  }
 </script>
 
 <svelte:head>
