@@ -70,8 +70,8 @@
     <span class="absolute right-2 top-2 max-w-[calc(100%-5.5rem)] truncate rounded-full bg-violet-600/90 px-2 py-1 text-[11px] font-bold text-white shadow-soft">
       {sourceLabel}
     </span>
-    <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-3 text-white">
-      <h3 class="line-clamp-2 min-h-10 text-sm font-semibold leading-5">
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 via-60% to-transparent px-3 pb-3 pt-12 text-white">
+      <h3 class="line-clamp-2 min-h-10 text-sm font-semibold leading-5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
         {manga.title}
       </h3>
     </div>
