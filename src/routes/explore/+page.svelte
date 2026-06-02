@@ -1,5 +1,7 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
+  import { page as pageStore } from '$app/stores';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
   import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
   import Button from '$lib/components/ui/Button.svelte';
@@ -41,6 +43,7 @@
     ? $settings.defaultSourceId
     : (sources[0]?.id ?? 'shinigami');
   $: sourceName = sources.find((source) => source.id === sourceId)?.name ?? sourceId;
+  $: requestedPage = Math.max(1, Number($pageStore.url.searchParams.get('page') ?? 1));
   $: visibleItems = status === 'all' ? items : items.filter((item) => item.status === status);
   $: hero = featured[0] ?? visibleItems[0];
   $: recommendedMatches = visibleItems.filter((item) =>
@@ -48,13 +51,13 @@
   );
   $: recommended = (recommendedMatches.length ? recommendedMatches : visibleItems).slice(0, 6);
   $: updateItems = (updateTab === 'Mirror' ? [...visibleItems].reverse() : visibleItems).slice(0, 24);
-  $: key = `${sourceId}:${sort}`;
+  $: key = `${sourceId}:${sort}:${requestedPage}`;
   $: if (browser && sources.length && sourceId !== $settings.defaultSourceId) {
     settings.update((value) => ({ ...value, defaultSourceId: sourceId }));
   }
   $: if (browser && mounted && key !== lastKey) {
     lastKey = key;
-    loadList(1);
+    loadList(requestedPage, { scrollToTop: true });
   }
 
   function uniqueManga(nextItems: Manga[]) {
@@ -67,7 +70,23 @@
     });
   }
 
-  async function loadList(nextPage = page) {
+  function pageUrl(nextPage: number) {
+    const url = new URL($pageStore.url);
+    if (nextPage > 1) url.searchParams.set('page', String(nextPage));
+    else url.searchParams.delete('page');
+    return `${url.pathname}${url.search}`;
+  }
+
+  async function setExplorePage(nextPage: number) {
+    const targetPage = Math.max(1, nextPage);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    await goto(pageUrl(targetPage), {
+      keepFocus: true,
+      noScroll: true
+    });
+  }
+
+  async function loadList(nextPage = page, options: { scrollToTop?: boolean } = {}) {
     activeController?.abort();
     if (activeTimeout) window.clearTimeout(activeTimeout);
     const currentRequest = ++requestId;
@@ -79,8 +98,7 @@
     error = '';
     const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
     try {
-      const response = await sourceFetch(fetch, sourceId, `/api/${sourceId}/list?page=${nextPage}&filters=${filters}&_=${Date.now()}`, {
-        cache: 'no-store',
+      const response = await sourceFetch(fetch, sourceId, `/api/${sourceId}/list?page=${nextPage}&filters=${filters}`, {
         signal: controller.signal
       });
       if (currentRequest !== requestId) return;
@@ -94,6 +112,9 @@
       page = result.page;
       hasNextPage = result.hasNextPage;
       featured = result.items.slice(0, 6);
+      if (options.scrollToTop) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
     } catch (err) {
       if (currentRequest !== requestId) return;
       error = err instanceof Error && err.name === 'AbortError' ? 'Source terlalu lama merespons. Coba refresh atau pilih source lain.' : err instanceof Error ? err.message : 'Unable to load manga';
@@ -110,13 +131,14 @@
     if (!loading || items.length || Date.now() - loadingStartedAt < 5_000) return;
     activeController?.abort();
     loading = false;
-    loadList(1);
+    loadList(requestedPage);
   }
 
   onMount(() => {
     mounted = true;
     lastKey = key;
-    if (sources.length) loadList(1);
+    page = requestedPage;
+    if (sources.length) loadList(requestedPage);
     else {
       loading = false;
       error = 'Belum ada source yang ditambahkan. Buka Profile > All Series untuk add source.';
@@ -136,6 +158,7 @@
   function setSource(event: Event) {
     const target = event.target as HTMLSelectElement;
     settings.update((value) => ({ ...value, defaultSourceId: target.value }));
+    setExplorePage(1);
   }
 </script>
 
@@ -149,6 +172,9 @@
         class="absolute inset-0 h-full w-full object-cover opacity-55 transition duration-500 group-hover:scale-[1.03]"
         src={proxiedImageUrl(hero.coverUrl)}
         alt={hero.title}
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
       />
     {:else}
       <Skeleton class="absolute inset-0 rounded-none" />
@@ -194,7 +220,7 @@
       {/each}
     </Select>
   </label>
-  <FilterPanel bind:view bind:sort bind:status on:click={() => loadList(1)} />
+  <FilterPanel bind:view bind:sort bind:status on:click={() => setExplorePage(1)} />
 </Card>
 
 {#if recommended.length}
@@ -218,7 +244,7 @@
       {#each recommended as manga (manga.id)}
         <a class="group relative aspect-[2/3] overflow-hidden rounded-lg bg-[#141416] text-white" href={`/manga/${manga.sourceId}/${manga.id}`}>
           {#if manga.coverUrl}
-            <img class="h-full w-full object-cover transition group-hover:scale-105" src={proxiedImageUrl(manga.coverUrl)} alt={manga.title} />
+            <img class="h-full w-full object-cover transition group-hover:scale-105" src={proxiedImageUrl(manga.coverUrl)} alt={manga.title} loading="eager" decoding="async" />
           {:else}
             <Skeleton class="h-full w-full rounded-none" />
           {/if}
@@ -276,28 +302,28 @@
       <Button
         variant="outline"
         disabled={loading || page <= 1}
-        on:click={() => loadList(1)}
+        on:click={() => setExplorePage(1)}
       >
         First
       </Button>
       <Button
         variant="secondary"
         disabled={loading || page <= 1}
-        on:click={() => loadList(page - 1)}
+        on:click={() => setExplorePage(page - 1)}
       >
         Previous
       </Button>
       {#if page > 2}
-        <Button variant="outline" size="sm" disabled={loading} on:click={() => loadList(page - 2)}>{page - 2}</Button>
+        <Button variant="outline" size="sm" disabled={loading} on:click={() => setExplorePage(page - 2)}>{page - 2}</Button>
       {/if}
       {#if page > 1}
-        <Button variant="outline" size="sm" disabled={loading} on:click={() => loadList(page - 1)}>{page - 1}</Button>
+        <Button variant="outline" size="sm" disabled={loading} on:click={() => setExplorePage(page - 1)}>{page - 1}</Button>
       {/if}
       <span class="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">{loading ? '...' : page}</span>
       {#if hasNextPage}
-        <Button variant="outline" size="sm" disabled={loading} on:click={() => loadList(page + 1)}>{page + 1}</Button>
+        <Button variant="outline" size="sm" disabled={loading} on:click={() => setExplorePage(page + 1)}>{page + 1}</Button>
       {/if}
-      <Button disabled={loading || !hasNextPage} on:click={() => loadList(page + 1)}>
+      <Button disabled={loading || !hasNextPage} on:click={() => setExplorePage(page + 1)}>
         Next
       </Button>
     </div>

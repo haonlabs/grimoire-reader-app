@@ -49,7 +49,8 @@
         class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] {coverLoaded ? 'opacity-100' : 'opacity-0'}"
         src={proxiedImageUrl(manga.coverUrl)}
         alt={manga.title}
-        loading="lazy"
+        loading="eager"
+        decoding="async"
         on:load={() => (coverLoaded = true)}
         on:error={() => {
           coverLoaded = true;

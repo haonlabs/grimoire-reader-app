@@ -4,6 +4,7 @@
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import { library } from '$lib/stores/library';
   import type { Chapter, Manga } from '$lib/sources/types';
+  import { sourceFetch } from '$lib/utils/sourceUnlock';
 
   interface UpdateEntry {
     manga: Manga;
@@ -13,12 +14,12 @@
   let loading = false;
   let updates: UpdateEntry[] = [];
 
-  async function checkUpdates() {
+  async function checkUpdates(force = false) {
     loading = true;
     const next: UpdateEntry[] = [];
     for (const entry of $library) {
       try {
-        const response = await fetch(`/api/${entry.manga.sourceId}/manga/${entry.manga.id}/chapters`);
+        const response = await sourceFetch(fetch, entry.manga.sourceId, `/api/${entry.manga.sourceId}/manga/${entry.manga.id}/chapters`, force ? { cache: 'reload' } : {});
         if (!response.ok) continue;
         const chapters = (await response.json()) as Chapter[];
         for (const chapter of chapters.slice(0, 3)) next.push({ manga: entry.manga, chapter });
@@ -30,7 +31,7 @@
     loading = false;
   }
 
-  onMount(checkUpdates);
+  onMount(() => checkUpdates());
 </script>
 
 <section class="mb-6 flex items-end justify-between gap-3 rounded-lg border border-white/10 bg-[#111116] p-4 shadow-soft">
@@ -38,7 +39,7 @@
     <p class="text-sm font-medium text-ember">Updates</p>
     <h1 class="mt-1 text-3xl font-bold text-white">Latest library chapters</h1>
   </div>
-  <button class="focus-ring inline-flex items-center gap-2 rounded-lg bg-ember px-3 py-2 text-sm font-semibold text-white" type="button" on:click={checkUpdates}>
+  <button class="focus-ring inline-flex items-center gap-2 rounded-lg bg-ember px-3 py-2 text-sm font-semibold text-white" type="button" on:click={() => checkUpdates(true)}>
     <RefreshCw class={loading ? 'animate-spin' : ''} size={17} />
     Check
   </button>

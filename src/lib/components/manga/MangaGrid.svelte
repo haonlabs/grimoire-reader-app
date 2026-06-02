@@ -1,12 +1,25 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { BookOpen, Star } from 'lucide-svelte';
   import type { Manga } from '$lib/sources/types';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
-  import { proxiedImageUrl } from '$lib/utils/image';
+  import { preloadImages, proxiedImageUrl } from '$lib/utils/image';
   import MangaCard from './MangaCard.svelte';
 
   export let items: Manga[] = [];
   export let view: 'grid' | 'list' = 'grid';
+
+  let preloadKey = '';
+  let stopImagePreload: () => void = () => {};
+
+  $: nextPreloadKey = items.map((manga) => manga.coverUrl).filter(Boolean).join('\n');
+  $: if (nextPreloadKey !== preloadKey) {
+    preloadKey = nextPreloadKey;
+    stopImagePreload();
+    stopImagePreload = preloadImages(items.map((manga) => manga.coverUrl));
+  }
+
+  onDestroy(() => stopImagePreload());
 </script>
 
 {#if view === 'grid'}
@@ -28,7 +41,8 @@
               class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
               src={proxiedImageUrl(manga.coverUrl)}
               alt={manga.title}
-              loading="lazy"
+              loading="eager"
+              decoding="async"
             />
           {:else}
             <div class="flex h-full items-center justify-center text-ink/40 dark:text-white/40">

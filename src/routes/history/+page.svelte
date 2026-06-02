@@ -1,7 +1,20 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { Trash2 } from 'lucide-svelte';
   import { history } from '$lib/stores/history';
-  import { proxiedImageUrl } from '$lib/utils/image';
+  import { preloadImages, proxiedImageUrl } from '$lib/utils/image';
+
+  let preloadKey = '';
+  let stopImagePreload: () => void = () => {};
+
+  $: nextPreloadKey = $history.map((item) => item.manga.coverUrl).filter(Boolean).join('\n');
+  $: if (nextPreloadKey !== preloadKey) {
+    preloadKey = nextPreloadKey;
+    stopImagePreload();
+    stopImagePreload = preloadImages($history.map((item) => item.manga.coverUrl));
+  }
+
+  onDestroy(() => stopImagePreload());
 </script>
 
 <section class="mb-6 flex items-end justify-between gap-3 rounded-lg border border-white/10 bg-[#111116] p-4 shadow-soft">
@@ -17,7 +30,7 @@
 <div class="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-[#111116]">
   {#each $history as item (item.chapter.id)}
     <a class="flex gap-3 p-3 transition hover:bg-white/10" href={`/manga/${item.manga.sourceId}/${item.manga.id}/${item.chapter.id}`}>
-      <img class="h-24 w-16 rounded object-cover" src={proxiedImageUrl(item.manga.coverUrl)} alt={item.manga.title} loading="lazy" />
+      <img class="h-24 w-16 rounded object-cover" src={proxiedImageUrl(item.manga.coverUrl)} alt={item.manga.title} loading="eager" decoding="async" />
       <div class="min-w-0 flex-1">
         <p class="font-semibold text-white">{item.manga.title}</p>
         <p class="mt-1 text-sm text-white/60">Chapter {item.chapter.number || '?'}</p>

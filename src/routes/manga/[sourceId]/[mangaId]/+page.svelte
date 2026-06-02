@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { Bookmark, BookOpen, Check, Eye, RotateCcw, Star, Trophy } from 'lucide-svelte';
+  import { goto } from '$app/navigation';
+  import { ArrowLeft, Bookmark, BookOpen, Check, Eye, RotateCcw, Star, Trophy } from 'lucide-svelte';
   import ChapterList from '$lib/components/manga/ChapterList.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import type { Chapter, MangaDetail } from '$lib/sources/types';
@@ -64,6 +65,14 @@
     if (tab === 'Chapters' || tab === 'Info' || tab === 'Novel') activeTab = tab;
   }
 
+  function goBack() {
+    if (history.length > 1) {
+      history.back();
+      return;
+    }
+    goto('/explore');
+  }
+
   async function checkCachedCover() {
     if (coverCheckQueued) return;
     coverCheckQueued = true;
@@ -86,6 +95,15 @@
     <p class="mt-1 text-sm">{data.error}</p>
   </div>
 {:else}
+  <button
+    class="focus-ring mb-4 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-[#141416] px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+    type="button"
+    on:click={goBack}
+  >
+    <ArrowLeft size={17} />
+    Kembali
+  </button>
+
   <section class="grid gap-6 lg:grid-cols-[18rem_1fr]">
     <div class="mx-auto w-52 sm:w-64 lg:sticky lg:top-24 lg:w-full lg:self-start">
       <div class="relative overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-soft">
@@ -98,6 +116,9 @@
             class="aspect-[2/3] w-full object-cover transition-opacity duration-200 {coverLoaded ? 'opacity-100' : 'opacity-0'}"
             src={proxiedImageUrl(data.manga.coverUrl)}
             alt={data.manga.title}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
             on:load={() => (coverLoaded = true)}
             on:error={() => {
               coverLoaded = true;

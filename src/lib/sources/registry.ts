@@ -23,6 +23,7 @@ export const SOURCE_REGISTRY: Record<string, MangaSource> = {
   batoto: new BatoToSource(),
   crotpedia: new CrotpediaSource(),
   doujinpoi: new DoujinpoiSource(),
+  dojinpoi: new DoujinpoiSource('dojinpoi'),
   doujindesu: new DoujinDesuSource('doujindesu'),
   kotatsu_id_doujindesuparser: new DoujinDesuSource('kotatsu_id_doujindesuparser'),
   komiku: new KomikuSource(),

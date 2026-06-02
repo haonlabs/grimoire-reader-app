@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { CheckCircle2, Play } from 'lucide-svelte';
   import type { Chapter } from '$lib/sources/types';
-  import { proxiedImageUrl } from '$lib/utils/image';
+  import { preloadImages, proxiedImageUrl } from '$lib/utils/image';
 
   export let chapters: Chapter[] = [];
   export let mangaId: string;
@@ -10,12 +11,22 @@
   export let sort: 'newest' | 'oldest' = 'newest';
   export let coverUrl = '';
   let failedImages: Record<string, true> = {};
+  let preloadKey = '';
+  let stopImagePreload: () => void = () => {};
 
   $: sorted = [...chapters].sort((a, b) =>
     sort === 'newest'
       ? Number(b.number) - Number(a.number)
       : Number(a.number) - Number(b.number)
   );
+  $: nextPreloadKey = sorted.map((chapter) => chapter.thumbnailUrl || coverUrl).filter(Boolean).join('\n');
+  $: if (nextPreloadKey !== preloadKey) {
+    preloadKey = nextPreloadKey;
+    stopImagePreload();
+    stopImagePreload = preloadImages(sorted.map((chapter) => chapter.thumbnailUrl || coverUrl));
+  }
+
+  onDestroy(() => stopImagePreload());
 
   function relativeDate(value: string) {
     const date = new Date(value);
@@ -40,7 +51,8 @@
             class="h-full w-full object-cover"
             src={proxiedImageUrl(chapter.thumbnailUrl || coverUrl)}
             alt=""
-            loading="lazy"
+            loading="eager"
+            decoding="async"
             on:error={() => (failedImages = { ...failedImages, [chapter.id]: true })}
           />
         {:else}

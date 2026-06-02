@@ -15,9 +15,7 @@ import {
   encodeId,
   fetchText,
   formatFrom,
-  imageSrc,
   loadHtml,
-  numberFrom,
   statusFrom
 } from '$lib/sources/kotatsuPort/common';
 
@@ -30,9 +28,11 @@ interface AsuraGenre {
 }
 
 interface AsuraSeries {
+  id?: number;
   slug: string;
   title: string;
   cover: string;
+  cover_url?: string;
   public_url?: string;
   alt_titles?: string[];
   alternative_titles?: string;
@@ -44,6 +44,21 @@ interface AsuraSeries {
   rating?: number;
   chapter_count?: number;
   genres?: AsuraGenre[];
+  latest_chapters?: AsuraChapter[];
+}
+
+interface AsuraChapter {
+  id?: number;
+  series_id?: number;
+  number?: number;
+  title?: string;
+  slug?: string;
+  page_count?: number;
+  published_at?: string;
+  created_at?: string;
+  series_slug?: string;
+  is_locked?: boolean;
+  unlock_time?: string;
 }
 
 interface AsuraListResponse {
@@ -55,6 +70,18 @@ interface AsuraListResponse {
 
 interface AsuraDetailResponse {
   series?: AsuraSeries;
+}
+
+interface AsuraChaptersResponse {
+  data?: AsuraChapter[];
+}
+
+interface AsuraChapterResponse {
+  data?: {
+    chapter?: AsuraChapter & {
+      pages?: Array<{ url?: string }>;
+    };
+  };
 }
 
 function selectedFilter(filters: FilterInput[] | undefined, id: string) {
@@ -75,13 +102,17 @@ function publicUrl(series: AsuraSeries) {
   return absoluteUrl(SITE_BASE, series.public_url || `/comics/${series.slug}`);
 }
 
+function coverUrl(series: AsuraSeries) {
+  return absoluteUrl(SITE_BASE, series.cover || series.cover_url);
+}
+
 function seriesFromApi(sourceId: string, series: AsuraSeries): Manga {
   const url = publicUrl(series);
   return {
     id: encodeId(url),
     sourceId,
     title: clean(series.title) || series.slug,
-    coverUrl: absoluteUrl(SITE_BASE, series.cover),
+    coverUrl: coverUrl(series),
     author: clean(series.author) || undefined,
     artist: clean(series.artist) || undefined,
     description: stripHtml(series.description),
@@ -101,6 +132,31 @@ function slugFromMangaId(mangaId: string) {
   } catch {
     return decoded.replace(/^\/?comics\//, '').replace(/^\/+|\/+$/g, '');
   }
+}
+
+function decodedPathParts(value: string) {
+  const decoded = decodeId(value);
+  try {
+    return new URL(decoded).pathname.split('/').filter(Boolean);
+  } catch {
+    return decoded.split('/').filter(Boolean);
+  }
+}
+
+function chapterFromApi(sourceId: string, mangaId: string, seriesSlug: string, chapter: AsuraChapter): Chapter | null {
+  if (!chapter.slug || chapter.is_locked) return null;
+  const number = Number(chapter.number) || 0;
+  const url = new URL(`/comics/${seriesSlug}/chapter/${chapter.slug}`, SITE_BASE).toString();
+  return {
+    id: encodeId(url),
+    mangaId,
+    sourceId,
+    number,
+    title: clean(chapter.title) || `Chapter ${number || '?'}`,
+    language: 'en',
+    uploadedAt: chapter.published_at || chapter.created_at || new Date().toISOString(),
+    url
+  };
 }
 
 function uniqueClean(values: Array<string | undefined>) {
@@ -158,43 +214,44 @@ export class AsuraScansSource implements MangaSource {
   }
 
   async getChapters(mangaId: string): Promise<Chapter[]> {
-    const mangaUrl = decodeId(mangaId);
     const slug = slugFromMangaId(mangaId);
-    const $ = loadHtml(await this.fetch(mangaUrl));
+    const chapters: Chapter[] = [];
     const seen = new Set<string>();
-    const chapters = $('a[href*="/chapter/"]')
-      .toArray()
-      .map((element, index): Chapter | null => {
-        const link = $(element);
-        const href = absoluteUrl(SITE_BASE, link.attr('href'));
-        if (!href || seen.has(href)) return null;
-        seen.add(href);
-        const number = Number(new URL(href).pathname.split('/').at(-1)) || numberFrom(link.text()) || index + 1;
-        return {
-          id: encodeId(href),
-          mangaId,
-          sourceId: this.id,
-          number,
-          title: `Chapter ${number}`,
-          language: 'en',
-          uploadedAt: new Date().toISOString(),
-          url: href
-        };
-      })
-      .filter((chapter): chapter is Chapter => Boolean(chapter));
+    const limit = 100;
+    for (let offset = 0; offset < 500; offset += limit) {
+      const url = new URL(`/api/series/${slug}/chapters`, API_ORIGIN);
+      url.searchParams.set('offset', String(offset));
+      url.searchParams.set('limit', String(limit));
+      const data = JSON.parse(await this.fetch(url.toString())) as AsuraChaptersResponse;
+      const batch = data.data ?? [];
+      for (const item of batch) {
+        const chapter = chapterFromApi(this.id, mangaId, slug, item);
+        if (!chapter || seen.has(chapter.id)) continue;
+        seen.add(chapter.id);
+        chapters.push(chapter);
+      }
+      if (batch.length < limit) break;
+    }
 
     return chapters
-      .filter((chapter) => chapter.url.includes(`/comics/${slug}/chapter/`))
       .sort((left, right) => right.number - left.number);
   }
 
   async getPages(chapterId: string): Promise<string[]> {
-    const chapterUrl = decodeId(chapterId);
-    const $ = loadHtml(await this.fetch(chapterUrl));
-    const pages = $('img[alt^="Page "]')
-      .map((_, element) => imageSrc($, $(element), SITE_BASE))
-      .get()
-      .filter((url) => url.includes('/asura-images/chapters/'));
+    const parts = decodedPathParts(chapterId);
+    const seriesSlug = parts[1] ?? '';
+    const chapterSlug = parts.at(-1) ?? '';
+    if (!seriesSlug || !chapterSlug) {
+      throw Object.assign(new Error('Invalid Asura chapter id'), {
+        status: 400,
+        code: 'SOURCE_PARSE_FAILED'
+      });
+    }
+    const raw = await this.fetch(new URL(`/api/series/${seriesSlug}/chapters/${chapterSlug}`, API_ORIGIN).toString());
+    const data = JSON.parse(raw) as AsuraChapterResponse;
+    const pages = data.data?.chapter?.pages
+      ?.map((page) => absoluteUrl(SITE_BASE, clean(page.url)))
+      .filter((url) => url.includes('/asura-images/chapters/')) ?? [];
     if (pages.length) return [...new Set(pages)];
     throw Object.assign(new Error('No pages found for this chapter'), {
       status: 502,

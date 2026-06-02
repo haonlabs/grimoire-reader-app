@@ -95,7 +95,7 @@ function chapterParts(chapterId: string) {
   const decoded = decodeId(chapterId);
   try {
     const url = new URL(decoded);
-    const match = url.pathname.match(/^\/read\/([^/]+)\/([^/]+)/);
+    const match = url.pathname.match(/^\/(?:read|chapter)\/([^/]+)\/([^/]+)/);
     if (match) return { mangaSlug: decodeURIComponent(match[1]), chapterSlug: decodeURIComponent(match[2]) };
   } catch {
     // Fall through to compact id parsing.
@@ -109,6 +109,20 @@ function parseStatus(text?: string | null): MangaStatus {
   if (/^end$/i.test(value)) return 'completed';
   if (/publishing|ongoing|^ong$/i.test(value)) return 'ongoing';
   return statusFrom(value);
+}
+
+function pageUrl(value?: string | null) {
+  const url = absoluteUrl(SITE_BASE, clean(value));
+  if (!url) return '';
+  try {
+    return new URL(url).toString();
+  } catch {
+    return url;
+  }
+}
+
+function uniquePages(values: string[]) {
+  return [...new Set(values.map(pageUrl).filter(Boolean))];
 }
 
 function mangaFromInfo(sourceId: string, info: DoujinpoiMangaInfo): Manga {
@@ -206,15 +220,19 @@ export class DoujinpoiSource implements MangaSource {
         code: 'SOURCE_BAD_ID'
       });
     }
-    const raw = await this.fetch(new URL(`/api/read/${mangaSlug}/${chapterSlug}`, SITE_BASE).toString());
-    const data = JSON.parse(raw) as DoujinpoiReadResponse;
-    if (!data.success) {
-      throw Object.assign(new Error(data.message || 'Gagal memuat chapter Doujinpoi'), {
-        status: 502,
-        code: 'SOURCE_PARSE_FAILED'
-      });
+    const readUrl = new URL(`/read/${mangaSlug}/${chapterSlug}`, SITE_BASE).toString();
+    try {
+      const raw = await this.fetch(new URL(`/api/read/${mangaSlug}/${chapterSlug}`, SITE_BASE).toString());
+      const data = JSON.parse(raw) as DoujinpoiReadResponse;
+      if (data.success) {
+        const pages = uniquePages(data.data?.chapter?.images ?? []);
+        if (pages.length) return pages;
+      }
+    } catch {
+      // Some cached or legacy chapter ids are only recoverable from the reader HTML.
     }
-    const pages = data.data?.chapter?.images?.map(clean).filter(Boolean) ?? [];
+
+    const pages = this.pagesFromReaderHtml(await this.fetch(readUrl));
     if (pages.length) return pages;
     throw Object.assign(new Error('No pages found for this chapter'), {
       status: 502,
@@ -333,6 +351,20 @@ export class DoujinpoiSource implements MangaSource {
       uploadedAt: chapter.createdAt || chapter.updatedAt || new Date().toISOString(),
       url
     };
+  }
+
+  private pagesFromReaderHtml(html: string) {
+    const $ = loadHtml(html);
+    const fromImages = $('img')
+      .map((_, image) => imageSrc($, $(image), SITE_BASE))
+      .get()
+      .filter((url) => /desu\.photos|manhwature|uploads/i.test(url));
+    const fromScripts = $('script')
+      .map((_, script) => $(script).html() ?? '')
+      .get()
+      .flatMap((script) => script.match(/https?:\\?\/\\?\/[^"'\\]+?\.(?:webp|jpe?g|png)/gi) ?? [])
+      .map((url) => url.replace(/\\\//g, '/'));
+    return uniquePages([...fromImages, ...fromScripts]);
   }
 
   private hasNextPage($: ReturnType<typeof loadHtml>, page: number) {
