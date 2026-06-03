@@ -12,6 +12,7 @@ export interface UserSettings {
   uiLanguage: UiLanguage;
   defaultSourceId: string;
   defaultContentRating: 'safe' | 'suggestive' | 'explicit';
+  adultModeEnabled: boolean;
   reader: {
     mode: ReadingMode;
     fit: FitMode;
@@ -27,6 +28,7 @@ export const defaultSettings: UserSettings = {
   uiLanguage: 'id',
   defaultSourceId: 'shinigami',
   defaultContentRating: 'suggestive',
+  adultModeEnabled: false,
   reader: {
     mode: 'vertical',
     fit: 'width',
@@ -45,14 +47,21 @@ export const nativeSourceIds = [
   'crotpedia',
   'doujinpoi',
   'dojinpoi',
-  'doujindesu',
   'komiku',
   'shinigami',
   'komikcast',
-  'komiktap'
+  'komiktap',
+  'sasangeyou',
+  'mihentai',
+  'toongod'
 ];
+export const adultModeSourceIds = ['crotpedia', 'doujinpoi', 'dojinpoi', 'komiktap', 'sasangeyou', 'mihentai', 'toongod'];
 export const defaultEnabledSources = ['shinigami'];
 export const enabledSources = localStore<string[]>('manga_sources_enabled', defaultEnabledSources);
+
+export function isAdultModeSource(sourceId: string) {
+  return adultModeSourceIds.includes(sourceId);
+}
 
 if (browser) {
   enabledSources.update((items) => {
@@ -64,7 +73,11 @@ if (browser) {
   settings.update((value) => ({
     ...value,
     uiLanguage: value.uiLanguage === 'en' ? 'id' : value.uiLanguage,
-    defaultSourceId: nativeSourceIds.includes(value.defaultSourceId) ? value.defaultSourceId : 'shinigami',
+    adultModeEnabled: value.adultModeEnabled ?? false,
+    defaultSourceId:
+      nativeSourceIds.includes(value.defaultSourceId) && ((value.adultModeEnabled ?? false) || !isAdultModeSource(value.defaultSourceId))
+        ? value.defaultSourceId
+        : 'shinigami',
     reader: {
       ...value.reader,
       mode: 'vertical',

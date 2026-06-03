@@ -11,7 +11,7 @@
   import Select from '$lib/components/ui/Select.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import type { Manga, MangaListResult, SourceMetadata } from '$lib/sources/types';
-  import { enabledSources, settings } from '$lib/stores/settings';
+  import { enabledSources, isAdultModeSource, settings } from '$lib/stores/settings';
   import { proxiedImageUrl } from '$lib/utils/image';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
   import { sourceFetch } from '$lib/utils/sourceUnlock';
@@ -40,12 +40,19 @@
   let formatTab = 'Manhwa';
   let updateTab = 'Project';
 
-  $: sources = (data.sources ?? []).filter((source) => source.isImplemented !== false && $enabledSources.includes(source.id));
+  $: sources = (data.sources ?? []).filter(
+    (source) =>
+      source.isImplemented !== false &&
+      $enabledSources.includes(source.id) &&
+      ($settings.adultModeEnabled || !isAdultModeSource(source.id))
+  );
   $: sourceId = sources.some((source) => source.id === $settings.defaultSourceId)
     ? $settings.defaultSourceId
     : (sources[0]?.id ?? 'shinigami');
-  $: sourceName = sources.find((source) => source.id === sourceId)?.name ?? sourceId;
+  $: sourceMeta = sources.find((source) => source.id === sourceId);
+  $: sourceName = sourceMeta?.name ?? sourceId;
   $: sourceNames = Object.fromEntries(sources.map((source) => [source.id, source.name]));
+  $: adultMode = isAdultModeSource(sourceId) ? 'include' : '';
   $: requestedPage = Math.max(1, Number($pageStore.url.searchParams.get('page') ?? 1));
   $: visibleItems = status === 'all' ? items : items.filter((item) => item.status === status);
   $: hero = featured[0] ?? visibleItems[0];
@@ -54,7 +61,7 @@
   );
   $: recommended = (recommendedMatches.length ? recommendedMatches : visibleItems).slice(0, 6);
   $: updateItems = (updateTab === 'Mirror' ? [...visibleItems].reverse() : visibleItems).slice(0, 24);
-  $: key = `${sourceId}:${sort}:${requestedPage}`;
+  $: key = `${sourceId}:${sort}:${adultMode}:${requestedPage}`;
   $: if (browser && sources.length && sourceId !== $settings.defaultSourceId) {
     settings.update((value) => ({ ...value, defaultSourceId: sourceId }));
   }
@@ -100,7 +107,11 @@
     loading = true;
     loadingStartedAt = Date.now();
     error = '';
-    const filters = encodeURIComponent(JSON.stringify([{ id: 'sort', value: sort }]));
+    const nextFilters = [{ id: 'sort', value: sort }];
+    if (adultMode) {
+      nextFilters.push({ id: 'adultMode', value: adultMode });
+    }
+    const filters = encodeURIComponent(JSON.stringify(nextFilters));
     try {
       const response = await sourceFetch(fetch, sourceId, `/api/${sourceId}/list?page=${nextPage}&filters=${filters}`, {
         signal: controller.signal

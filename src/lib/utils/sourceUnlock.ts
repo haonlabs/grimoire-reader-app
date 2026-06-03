@@ -8,7 +8,8 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 const MAX_API_CACHE_ENTRIES = 120;
 const MAX_API_CACHE_BYTES = 4_000_000;
 
-type SourceCookies = Record<string, string>;
+type SourceUnlockEntry = string | { cookie?: string; userAgent?: string };
+type SourceUnlocks = Record<string, SourceUnlockEntry>;
 type ApiCacheIndex = Record<string, { createdAt: number; size: number }>;
 
 interface CachedApiResponse {
@@ -26,7 +27,15 @@ function cookieName(sourceId: string) {
 }
 
 function readCookies() {
-  return readLocalJson<SourceCookies>(STORAGE_KEY, {});
+  return readLocalJson<SourceUnlocks>(STORAGE_KEY, {});
+}
+
+function unlockCookie(entry: SourceUnlockEntry | undefined) {
+  return (typeof entry === 'string' ? entry : entry?.cookie)?.trim() ?? '';
+}
+
+function unlockUserAgent(entry: SourceUnlockEntry | undefined) {
+  return (typeof entry === 'string' ? '' : entry?.userAgent)?.trim() ?? '';
 }
 
 function writeSourceCookie(sourceId: string, value: string) {
@@ -41,18 +50,25 @@ function deleteSourceCookie(sourceId: string) {
 }
 
 export function getUnlockedSourceCookie(sourceId: string) {
-  return readCookies()[sourceId]?.trim() ?? '';
+  return unlockCookie(readCookies()[sourceId]);
+}
+
+export function getUnlockedSourceUserAgent(sourceId: string) {
+  return unlockUserAgent(readCookies()[sourceId]);
 }
 
 export function isSourceUnlocked(sourceId: string) {
   return Boolean(getUnlockedSourceCookie(sourceId));
 }
 
-export function saveUnlockedSourceCookie(sourceId: string, value: string) {
+export function saveUnlockedSourceCookie(sourceId: string, value: string, userAgent = getUnlockedSourceUserAgent(sourceId)) {
   const trimmed = value.trim();
   const next = { ...readCookies() };
   if (trimmed) {
-    next[sourceId] = trimmed;
+    next[sourceId] = {
+      cookie: trimmed,
+      userAgent: userAgent.trim()
+    };
     writeSourceCookie(sourceId, trimmed);
   } else {
     delete next[sourceId];
@@ -67,7 +83,11 @@ export function clearUnlockedSourceCookie(sourceId: string) {
 
 export function sourceUnlockHeaders(sourceId: string) {
   const cookie = getUnlockedSourceCookie(sourceId);
-  return cookie ? { 'x-grimoire-source-cookie': cookie } : {};
+  const userAgent = getUnlockedSourceUserAgent(sourceId);
+  return {
+    ...(cookie ? { 'x-grimoire-source-cookie': cookie } : {}),
+    ...(userAgent ? { 'x-grimoire-source-user-agent': userAgent } : {})
+  };
 }
 
 function sourceCacheTtl(pathname: string) {
@@ -221,7 +241,9 @@ function cacheResponse(key: string, response: Response, ttl: number, url: string
 export function sourceFetch(fetcher: typeof fetch, sourceId: string, input: RequestInfo | URL, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   const cookie = getUnlockedSourceCookie(sourceId);
+  const userAgent = getUnlockedSourceUserAgent(sourceId);
   if (cookie) headers.set('x-grimoire-source-cookie', cookie);
+  if (userAgent) headers.set('x-grimoire-source-user-agent', userAgent);
   const cache = cacheKey(sourceId, input, init, cookie);
   const cached = cache ? readCachedResponse(cache.key) : null;
   if (cached) return Promise.resolve(cached);

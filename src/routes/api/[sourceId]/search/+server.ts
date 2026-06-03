@@ -2,7 +2,9 @@ import { parseFilters, parsePage, sourceFromParams, sourceJson } from '$lib/serv
 
 export async function GET({ cookies, params, request, url }) {
   const query = url.searchParams.get('q') ?? '';
-  return sourceJson(() => sourceFromParams(params).search(query, parsePage(url), parseFilters(url)), {
+  const filters = parseFilters(url);
+  const page = parsePage(url);
+  return sourceJson(() => sourceFromParams(params).search(query, page, filters), {
     cookies,
     request,
     sourceId: params.sourceId

@@ -5,12 +5,17 @@
   import Input from '$lib/components/ui/Input.svelte';
   import Select from '$lib/components/ui/Select.svelte';
   import type { SourceMetadata } from '$lib/sources/types';
-  import { enabledSources, settings } from '$lib/stores/settings';
-  import { clearUnlockedSourceCookie, getUnlockedSourceCookie, isSourceUnlocked, saveUnlockedSourceCookie } from '$lib/utils/sourceUnlock';
+  import { adultModeSourceIds, enabledSources, isAdultModeSource, settings } from '$lib/stores/settings';
+  import {
+    clearUnlockedSourceCookie,
+    getUnlockedSourceCookie,
+    getUnlockedSourceUserAgent,
+    isSourceUnlocked,
+    saveUnlockedSourceCookie
+  } from '$lib/utils/sourceUnlock';
   import { onDestroy, onMount } from 'svelte';
 
   const SOURCE_BATCH_SIZE = 150;
-
   export let data: {
     sources: Array<SourceMetadata & { parserKind?: 'native' | 'generic' | 'catalog'; health?: { status: string; message?: string } }>;
   };
@@ -21,17 +26,21 @@
   let tab: 'all' | 'added' | 'available' = 'all';
   let unlockSource: SourceMetadata | undefined;
   let unlockCookie = '';
+  let unlockUserAgent = '';
   let unlockSavedAt = 0;
   let visibleLimit = SOURCE_BATCH_SIZE;
   let sentinel: HTMLDivElement;
   let observer: IntersectionObserver | undefined;
   let lastFilterKey = '';
 
-  $: languages = ['all', ...new Set(data.sources.map((source) => source.language))];
+  $: adultModeEnabled = $settings.adultModeEnabled;
+  $: displaySources = data.sources.filter((source) => adultModeEnabled || !isAdultModeSource(source.id));
+  $: hiddenAdultCount = data.sources.length - displaySources.length;
+  $: languages = ['all', ...new Set(displaySources.map((source) => source.language))];
   $: activeSource = $settings.defaultSourceId;
-  $: addedCount = data.sources.filter((source) => $enabledSources.includes(source.id)).length;
-  $: availableCount = data.sources.length - addedCount;
-  $: matchingSources = data.sources.filter((source) => {
+  $: addedCount = displaySources.filter((source) => $enabledSources.includes(source.id)).length;
+  $: availableCount = displaySources.length - addedCount;
+  $: matchingSources = displaySources.filter((source) => {
     const haystack = `${source.name} ${source.id} ${source.description} ${source.language}`.toLowerCase();
     const matchesText = haystack.includes(query.trim().toLowerCase());
     const matchesLanguage = language === 'all' || source.language === language;
@@ -42,7 +51,7 @@
       (tab === 'available' && !$enabledSources.includes(source.id));
     return matchesText && matchesLanguage && matchesRating && matchesTab;
   });
-  $: filterKey = `${query.trim().toLowerCase()}:${language}:${rating}:${tab}:${$enabledSources.join(',')}`;
+  $: filterKey = `${query.trim().toLowerCase()}:${language}:${rating}:${tab}:${adultModeEnabled}:${$enabledSources.join(',')}`;
   $: if (filterKey !== lastFilterKey) {
     lastFilterKey = filterKey;
     visibleLimit = SOURCE_BATCH_SIZE;
@@ -51,12 +60,13 @@
   $: hasMoreSources = visible.length < matchingSources.length;
 
   function toggleSource(id: string) {
+    if (isAdultModeSource(id) && !adultModeEnabled) return;
     enabledSources.update((items) => {
       if (!items.includes(id)) return [...items, id];
       const next = items.filter((item) => item !== id);
       if (activeSource === id) {
         const fallback = next.find((sourceId) =>
-          data.sources.some((source) => source.id === sourceId && source.isImplemented !== false)
+          displaySources.some((source) => source.id === sourceId && source.isImplemented !== false)
         );
         settings.update((value) => ({ ...value, defaultSourceId: fallback ?? 'shinigami' }));
       }
@@ -65,21 +75,38 @@
   }
 
   function setDefaultSource(id: string) {
-    const source = data.sources.find((item) => item.id === id);
+    if (isAdultModeSource(id) && !adultModeEnabled) return;
+    const source = displaySources.find((item) => item.id === id);
     if (source?.isImplemented === false) return;
     enabledSources.update((items) => (items.includes(id) ? items : [...items, id]));
     settings.update((value) => ({ ...value, defaultSourceId: id }));
   }
 
+  function setAdultModeEnabled(event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    settings.update((current) => ({
+      ...current,
+      adultModeEnabled: checked,
+      defaultSourceId: checked || !isAdultModeSource(current.defaultSourceId) ? current.defaultSourceId : 'shinigami'
+    }));
+    if (!checked) {
+      enabledSources.update((items) => {
+        const next = items.filter((sourceId) => !adultModeSourceIds.includes(sourceId));
+        return next.length ? next : ['shinigami'];
+      });
+    }
+  }
+
   function openUnlock(source: SourceMetadata) {
     unlockSource = source;
     unlockCookie = getUnlockedSourceCookie(source.id);
+    unlockUserAgent = getUnlockedSourceUserAgent(source.id) || (typeof navigator !== 'undefined' ? navigator.userAgent : '');
     unlockSavedAt = 0;
   }
 
   function saveUnlock() {
     if (!unlockSource) return;
-    saveUnlockedSourceCookie(unlockSource.id, unlockCookie);
+    saveUnlockedSourceCookie(unlockSource.id, unlockCookie, unlockUserAgent);
     unlockSavedAt = Date.now();
   }
 
@@ -87,6 +114,7 @@
     if (!unlockSource) return;
     clearUnlockedSourceCookie(unlockSource.id);
     unlockCookie = '';
+    unlockUserAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
     unlockSavedAt = Date.now();
   }
 
@@ -123,7 +151,7 @@
       class="border-0"
       on:click={() => (tab = 'all')}
     >
-      All {data.sources.length}
+      All {displaySources.length}
     </Button>
     <Button
       variant={tab === 'added' ? 'default' : 'ghost'}
@@ -165,6 +193,30 @@
   </p>
 </Card>
 
+<Card class="mb-5 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <p class="text-sm font-semibold text-white">Adult mode</p>
+    <p class="mt-1 text-sm leading-6 text-white/55">
+      Saat aktif, source adult seperti CrotPedia, Doujinpoi, KomikTap, Sasangeyou, MiHentai, dan ToonGod akan muncul di Source Manager.
+    </p>
+    {#if !adultModeEnabled && hiddenAdultCount > 0}
+      <p class="mt-1 text-xs text-white/40">{hiddenAdultCount} source adult sedang disembunyikan.</p>
+    {/if}
+  </div>
+  <label class="inline-flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+    <span class="text-sm font-semibold text-white/70">{adultModeEnabled ? 'On' : 'Off'}</span>
+    <input
+      class="peer sr-only"
+      type="checkbox"
+      checked={adultModeEnabled}
+      on:change={setAdultModeEnabled}
+    />
+    <span class="relative h-6 w-11 rounded-full transition {adultModeEnabled ? 'bg-ember' : 'bg-white/15'}">
+      <span class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition {adultModeEnabled ? 'translate-x-5' : ''}"></span>
+    </span>
+  </label>
+</Card>
+
 <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
   {#each visible as source}
     <Card class="p-4">
@@ -186,6 +238,11 @@
         </Button>
       </div>
       <p class="mt-3 line-clamp-2 text-sm leading-6 text-white/65">{source.description}</p>
+      {#if isAdultModeSource(source.id)}
+        <p class="mt-3 rounded-lg border border-ember/20 bg-ember/10 px-3 py-2 text-xs font-medium leading-5 text-ember">
+          Adult source
+        </p>
+      {/if}
       {#if source.baseUrl}
         <a
           class="mt-3 block max-w-full truncate text-sm font-medium text-violet-300"
@@ -282,6 +339,15 @@
           class="focus-ring min-h-28 rounded-lg border border-white/10 bg-white/10 p-3 font-mono text-xs text-white placeholder:text-white/35"
           bind:value={unlockCookie}
           placeholder="cf_clearance=...; __cf_bm=..."
+        ></textarea>
+      </label>
+
+      <label class="mt-4 grid gap-2 text-sm font-medium text-white/70">
+        User-Agent browser yang lolos
+        <textarea
+          class="focus-ring min-h-20 rounded-lg border border-white/10 bg-white/10 p-3 font-mono text-xs text-white placeholder:text-white/35"
+          bind:value={unlockUserAgent}
+          placeholder="Mozilla/5.0 ..."
         ></textarea>
       </label>
 

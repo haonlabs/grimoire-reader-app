@@ -4,6 +4,7 @@
   import Button from '$lib/components/ui/Button.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import { library } from '$lib/stores/library';
+  import { isAdultModeSource, settings } from '$lib/stores/settings';
   import type { Chapter, Manga } from '$lib/sources/types';
   import { sourceFetch } from '$lib/utils/sourceUnlock';
 
@@ -18,7 +19,8 @@
   async function checkUpdates(force = false) {
     loading = true;
     const next: UpdateEntry[] = [];
-    for (const entry of $library) {
+    const visibleLibrary = $library.filter((entry) => $settings.adultModeEnabled || !isAdultModeSource(entry.manga.sourceId));
+    for (const entry of visibleLibrary) {
       try {
         const response = await sourceFetch(fetch, entry.manga.sourceId, `/api/${entry.manga.sourceId}/manga/${entry.manga.id}/chapters`, force ? { cache: 'reload' } : {});
         if (!response.ok) continue;

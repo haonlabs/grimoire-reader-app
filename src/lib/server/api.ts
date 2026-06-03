@@ -32,10 +32,16 @@ function sourceCookieOverride(context?: SourceJsonContext) {
   return context.cookies.get(`grimoire_source_cookie_${context.sourceId}`)?.trim() ?? '';
 }
 
+function sourceUserAgentOverride(context?: SourceJsonContext) {
+  const userAgent = context?.request?.headers.get('x-grimoire-source-user-agent')?.trim() ?? '';
+  return userAgent.length <= 500 ? userAgent : '';
+}
+
 export async function sourceJson<T>(handler: () => Promise<T>, context?: SourceJsonContext) {
   try {
     const cookie = sourceCookieOverride(context);
-    const result = cookie ? await withSourceRequestCookie(cookie, handler) : await handler();
+    const userAgent = sourceUserAgentOverride(context);
+    const result = cookie ? await withSourceRequestCookie(cookie, handler, userAgent) : await handler();
     return json(result, {
       headers: {
         'cache-control': cookie ? 'private, no-store' : 'public, max-age=120'

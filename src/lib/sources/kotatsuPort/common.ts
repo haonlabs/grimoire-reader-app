@@ -22,7 +22,11 @@ type SourceFetchInit = RequestInit & {
   body?: BodyInit | null;
   sourceId?: string;
 };
-const requestCookieStorage = new AsyncLocalStorage<string>();
+interface SourceRequestProfile {
+  cookie?: string;
+  userAgent?: string;
+}
+const requestProfileStorage = new AsyncLocalStorage<SourceRequestProfile>();
 
 export function encodeId(value: string) {
   return Buffer.from(value, 'utf8').toString('base64url');
@@ -84,8 +88,8 @@ export function numberFrom(text?: string | null) {
   return fallback ? Number(fallback[1]) : 0;
 }
 
-export async function withSourceRequestCookie<T>(cookie: string, handler: () => Promise<T>) {
-  return requestCookieStorage.run(cookie, handler);
+export async function withSourceRequestCookie<T>(cookie: string, handler: () => Promise<T>, userAgent = '') {
+  return requestProfileStorage.run({ cookie, userAgent }, handler);
 }
 
 function headersToEntries(headers?: HeadersInit) {
@@ -100,7 +104,7 @@ function normalizedEnvKey(value?: string | null) {
 }
 
 function sourceCookie(url: string, sourceId?: string) {
-  const requestCookie = requestCookieStorage.getStore()?.trim();
+  const requestCookie = requestProfileStorage.getStore()?.cookie?.trim();
   if (requestCookie) return requestCookie;
 
   const hostKey = normalizedEnvKey(new URL(url).hostname);
@@ -121,10 +125,15 @@ function sourceCookie(url: string, sourceId?: string) {
   return '';
 }
 
+function sourceUserAgent() {
+  const userAgent = requestProfileStorage.getStore()?.userAgent?.trim();
+  return userAgent || USER_AGENT;
+}
+
 function isBlockedResponse(body: string, effectiveUrl: string) {
   return (
     effectiveUrl.includes('internet-positif') ||
-    /internet\s*positif|cf-mitigated|Just a moment|Attention Required|cf[_-]challenge|cf_clearance/i.test(body)
+    /internet\s*positif|Imunify360|bot-protection|Access denied|cf-mitigated|Just a moment|One moment,\s*please|Attention Required|cf[_-]challenge|challenge-platform|webdriverCheck|__CF\$cv|cf_clearance/i.test(body)
   );
 }
 
@@ -191,7 +200,7 @@ export async function fetchText(url: string, init: SourceFetchInit = {}) {
     'Cache-Control': 'no-cache',
     Pragma: 'no-cache',
     Referer: new URL(url).origin + '/',
-    'User-Agent': USER_AGENT,
+    'User-Agent': sourceUserAgent(),
     ...(cookie ? { Cookie: cookie } : {}),
     ...(init.headers ?? {})
   };

@@ -10,7 +10,7 @@
     UserCircle
   } from 'lucide-svelte';
   import SourceSelector from '$lib/components/ui/SourceSelector.svelte';
-  import { enabledSources, settings } from '$lib/stores/settings';
+  import { enabledSources, isAdultModeSource, settings } from '$lib/stores/settings';
   import type { SourceMetadata } from '$lib/sources/types';
 
   export let data: { sources: SourceMetadata[] };
@@ -25,8 +25,15 @@
     { href: '/settings', label: 'Settings', icon: Settings, description: 'Preferensi reader dan aplikasi' }
   ];
 
-  $: activeSource = $settings.defaultSourceId;
-  $: addedSources = data.sources.filter((source) => source.isImplemented !== false && $enabledSources.includes(source.id));
+  $: addedSources = data.sources.filter(
+    (source) =>
+      source.isImplemented !== false &&
+      $enabledSources.includes(source.id) &&
+      ($settings.adultModeEnabled || !isAdultModeSource(source.id))
+  );
+  $: activeSource = addedSources.some((source) => source.id === $settings.defaultSourceId)
+    ? $settings.defaultSourceId
+    : (addedSources[0]?.id ?? 'shinigami');
   $: sourceName = addedSources.find((source) => source.id === activeSource)?.name ?? activeSource;
 
   function setSource(event: Event) {

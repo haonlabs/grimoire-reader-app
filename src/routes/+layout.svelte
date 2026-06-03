@@ -62,7 +62,7 @@
 {:else}
   <div class="dark min-h-screen bg-[#050506] pb-20 text-white lg:pb-0">
     <header class="sticky top-0 z-10 border-b border-white/10 bg-[#050506]/95 px-4 py-3 backdrop-blur lg:px-8">
-      <div class="mx-auto flex max-w-7xl items-center gap-3">
+      <div class="mx-auto flex w-full max-w-[100rem] items-center gap-3">
         <a class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-black" href="/explore" aria-label="Home">
           <Sparkles size={20} />
         </a>
@@ -87,7 +87,7 @@
       </div>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+    <main class="mx-auto w-full max-w-[100rem] px-4 py-6 lg:px-6">
       <slot />
     </main>
 

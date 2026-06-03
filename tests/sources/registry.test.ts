@@ -23,5 +23,17 @@ describe('source registry', () => {
     expect(SOURCE_REGISTRY.shinigami?.name).toBe('Shinigami ID');
     expect(SOURCE_REGISTRY.komikcast?.name).toBe('Komikcast');
     expect(SOURCE_REGISTRY.komiktap?.name).toBe('KomikTap');
+    expect(SOURCE_REGISTRY.sasangeyou?.name).toBe('Sasangeyou');
+    expect(SOURCE_REGISTRY.mihentai?.name).toBe('MiHentai');
+    expect(SOURCE_REGISTRY.toongod?.name).toBe('ToonGod');
+  });
+
+  it('exposes adult content mode filters for WordPress-style sources', async () => {
+    const filters = await SOURCE_REGISTRY.toongod.getFilters?.();
+    expect(filters?.find((filter) => filter.id === 'adultMode')?.values.map((value) => value.value)).toEqual([
+      'exclude',
+      'include',
+      'only'
+    ]);
   });
 });

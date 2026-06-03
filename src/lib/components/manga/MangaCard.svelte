@@ -141,6 +141,13 @@
     return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
   }
 
+  function chapterShortcutTitle(chapter: Chapter) {
+    if (Number.isFinite(chapter.number) && chapter.number > 0) return `Chapter ${chapter.number}`;
+    const title = chapter.title?.trim();
+    if (title && title.length <= 40) return title;
+    return 'Chapter ?';
+  }
+
   function clearCoverTimer() {
     if (!coverTimer) return;
     clearTimeout(coverTimer);
@@ -219,7 +226,7 @@
               class="focus-ring flex min-h-8 items-center justify-between gap-2 rounded-md border border-ink/10 bg-ink/[0.03] px-2 text-xs font-semibold text-ink/75 transition hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70 dark:hover:text-white"
               href={`/manga/${manga.sourceId}/${manga.id}/${chapter.id}`}
             >
-              <span class="min-w-0 truncate">{chapter.title || `Chapter ${chapter.number}`}</span>
+              <span class="min-w-0 truncate">{chapterShortcutTitle(chapter)}</span>
               <span class="w-9 shrink-0 text-right text-[11px] text-ink/45 dark:text-white/45">{chapterTimeLabel(chapter.uploadedAt)}</span>
             </a>
           {/each}

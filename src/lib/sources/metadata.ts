@@ -45,17 +45,6 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     icon: 'CP'
   },
   {
-    id: 'doujindesu',
-    name: 'DoujinDesu.tv',
-    description: 'Source eksplisit berbahasa Indonesia dengan daftar judul, detail, dan halaman baca dari DoujinDesu.',
-    language: 'id',
-    baseUrl: 'https://doujindesu.tv',
-    contentRating: 'explicit',
-    isNsfw: true,
-    method: 'Scraping',
-    icon: 'DD'
-  },
-  {
     id: 'doujinpoi',
     name: 'Doujinpoi',
     description: 'Indonesian explicit source using Doujinpoi catalog pages and reader JSON endpoints.',
@@ -109,6 +98,39 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     isNsfw: false,
     method: 'Scraping',
     icon: 'KT'
+  },
+  {
+    id: 'sasangeyou',
+    name: 'Sasangeyou',
+    description: 'Source Indonesia dengan katalog, detail, daftar chapter, dan reader berbasis halaman WordPress MangaReader.',
+    language: 'id',
+    baseUrl: 'https://sasangeyou.net',
+    contentRating: 'explicit',
+    isNsfw: true,
+    method: 'Scraping',
+    icon: 'SY'
+  },
+  {
+    id: 'mihentai',
+    name: 'MiHentai',
+    description: 'Source eksplisit dengan parser fleksibel untuk katalog, detail, chapter, dan reader berbasis WordPress.',
+    language: 'id',
+    baseUrl: 'https://mihentai.net',
+    contentRating: 'explicit',
+    isNsfw: true,
+    method: 'Scraping',
+    icon: 'MH'
+  },
+  {
+    id: 'toongod',
+    name: 'ToonGod',
+    description: 'Source webtoon dengan parser katalog dan reader Madara, termasuk pilihan konten 18+ per source.',
+    language: 'en',
+    baseUrl: 'https://toongod.org',
+    contentRating: 'explicit',
+    isNsfw: true,
+    method: 'Scraping + API',
+    icon: 'TG'
   }
 ];
 

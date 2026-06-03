@@ -1,13 +1,15 @@
 import { AsuraScansSource } from './asurascans';
 import { CrotpediaSource } from './crotpedia';
 import { DoujinpoiSource } from './doujinpoi';
-import { DoujinDesuSource } from './doujindesu';
 import { KomikcastSource } from './komikcast';
 import { KomikTapSource } from './komiktap';
 import { KomikuSource } from './komiku';
 import { MangaDexSource } from './mangadex';
 import { MangaPlusSource } from './mangaplus';
+import { MiHentaiSource } from './mihentai';
+import { SasangeyouSource } from './sasangeyou';
 import { ShinigamiSource } from './shinigami';
+import { ToonGodSource } from './toongod';
 import type { MangaSource } from './types';
 
 export const SOURCE_REGISTRY: Record<string, MangaSource> = {
@@ -17,11 +19,13 @@ export const SOURCE_REGISTRY: Record<string, MangaSource> = {
   crotpedia: new CrotpediaSource(),
   doujinpoi: new DoujinpoiSource(),
   dojinpoi: new DoujinpoiSource('dojinpoi'),
-  doujindesu: new DoujinDesuSource('doujindesu'),
   komiku: new KomikuSource(),
   shinigami: new ShinigamiSource(),
   komikcast: new KomikcastSource(),
-  komiktap: new KomikTapSource('komiktap')
+  komiktap: new KomikTapSource('komiktap'),
+  sasangeyou: new SasangeyouSource(),
+  mihentai: new MiHentaiSource(),
+  toongod: new ToonGodSource()
 };
 
 export function getSource(sourceId: string): MangaSource {

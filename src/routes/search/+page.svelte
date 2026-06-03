@@ -6,7 +6,7 @@
   import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import type { MangaListResult, SourceMetadata } from '$lib/sources/types';
-  import { enabledSources, settings } from '$lib/stores/settings';
+  import { enabledSources, isAdultModeSource, settings } from '$lib/stores/settings';
   import { sourceFetch } from '$lib/utils/sourceUnlock';
 
   export let data: { sources: SourceMetadata[] };
@@ -22,7 +22,12 @@
   $: anyLoading = Object.values(loading).some(Boolean);
   $: query = $pageStore.url.searchParams.get('q') ?? query;
   $: mode = (($pageStore.url.searchParams.get('mode') as 'active' | 'all') ?? mode) || 'active';
-  $: implementedSources = data.sources.filter((item) => item.isImplemented !== false && $enabledSources.includes(item.id));
+  $: implementedSources = data.sources.filter(
+    (item) =>
+      item.isImplemented !== false &&
+      $enabledSources.includes(item.id) &&
+      ($settings.adultModeEnabled || !isAdultModeSource(item.id))
+  );
   $: requestedSource = $pageStore.url.searchParams.get('source') ?? $settings.defaultSourceId;
   $: source = implementedSources.some((item) => item.id === requestedSource)
     ? requestedSource
@@ -41,7 +46,9 @@
       selected.map(async (item) => {
         loading = { ...loading, [item.id]: true };
         try {
-          const response = await sourceFetch(fetch, item.id, `/api/${item.id}/search?q=${encodeURIComponent(query)}&page=1`);
+          const sourceFilters = isAdultModeSource(item.id) ? [{ id: 'adultMode', value: 'include' }] : [];
+          const filters = encodeURIComponent(JSON.stringify(sourceFilters));
+          const response = await sourceFetch(fetch, item.id, `/api/${item.id}/search?q=${encodeURIComponent(query)}&page=1&filters=${filters}`);
           const body = await response.json();
           if (!response.ok) {
             errors = { ...errors, [item.id]: body.error ?? 'Source failed' };

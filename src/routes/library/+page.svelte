@@ -2,7 +2,7 @@
   import { Plus, Trash2 } from 'lucide-svelte';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
   import { categories, library } from '$lib/stores/library';
-  import { enabledSources } from '$lib/stores/settings';
+  import { enabledSources, isAdultModeSource, settings } from '$lib/stores/settings';
 
   let activeCategory = 'all';
   let view: 'grid' | 'list' = 'grid';
@@ -12,6 +12,7 @@
   $: entries = $library
     .filter((entry) => activeCategory === 'all' || entry.categoryId === activeCategory)
     .filter((entry) => $enabledSources.includes(entry.manga.sourceId))
+    .filter((entry) => $settings.adultModeEnabled || !isAdultModeSource(entry.manga.sourceId))
     .sort((a, b) => {
       if (sort === 'title') return a.manga.title.localeCompare(b.manga.title);
       if (sort === 'read') return (b.lastReadAt ?? '').localeCompare(a.lastReadAt ?? '');

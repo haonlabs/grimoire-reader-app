@@ -40,6 +40,11 @@ function unwrapDoujinpoiImageCdn(target: URL) {
     fallback.pathname = target.pathname.replace(/^\/desu\.photos/, '');
     return fallback;
   }
+  if (target.hostname.endsWith('.manga18.club')) {
+    const fallback = new URL(target);
+    fallback.hostname = target.hostname.replace(/\.manga18\.club$/, '.manga18.us');
+    return fallback;
+  }
   return target;
 }
 
@@ -72,7 +77,11 @@ function allowedImageHost(hostname: string) {
     hostname === 'img.manhwaland.email' ||
     hostname === 'cover.eromanga.cfd' ||
     hostname === 'reader.eromanga.cfd' ||
-    hostname.endsWith('.eromanga.cfd')
+    hostname.endsWith('.eromanga.cfd') ||
+    hostname === 'azmin.manga18.us' ||
+    hostname.endsWith('.manga18.us') ||
+    hostname === 'azmin.manga18.club' ||
+    hostname.endsWith('.manga18.club')
   );
 }
 
