@@ -44,4 +44,6 @@ coverage/
 # Temporary files
 *.tmp
 .temp/
+browser-gateway/.chrome-profile/
+browser-extension/runtime-config.js
 .vercel

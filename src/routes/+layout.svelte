@@ -9,6 +9,7 @@
     Bookmark,
     Clock,
     Compass,
+    Download,
     Home,
     LoaderCircle,
     SlidersHorizontal,
@@ -23,7 +24,8 @@
     { href: '/library', label: 'Library', icon: Bookmark },
     { href: '/history', label: 'History', icon: Clock },
     { href: '/updates', label: 'Updates', icon: Bell },
-    { href: '/sources', label: 'Source Manager', icon: SlidersHorizontal }
+    { href: '/sources', label: 'Source Manager', icon: SlidersHorizontal },
+    { href: '/extension', label: 'Extension', icon: Download }
   ];
   const mobileNav = nav.filter((item) =>
     ['Home', 'Explore', 'Library', 'Source Manager'].includes(item.label)

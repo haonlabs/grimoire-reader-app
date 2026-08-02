@@ -56,6 +56,17 @@ const IMPLEMENTED_SOURCE_METADATA: SourceMetadata[] = [
     icon: 'DP'
   },
   {
+    id: 'doujindesu',
+    name: 'DoujinDesu',
+    description: 'Indonesian explicit source using the DoujinDesu catalog and reader API.',
+    language: 'id',
+    baseUrl: 'https://doujin.desu.xxx',
+    contentRating: 'explicit',
+    isNsfw: true,
+    method: 'Unofficial API',
+    icon: 'DD'
+  },
+  {
     id: 'komiku',
     name: 'Komiku',
     description: 'Indonesian source using the current Komiku API HTML partials and reader pages.',

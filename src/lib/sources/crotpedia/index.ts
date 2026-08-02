@@ -40,6 +40,59 @@ function parseStatusText(text: string): MangaStatus {
   return statusFrom(text.replace('Publishing', 'ongoing').replace('Completed', 'completed'));
 }
 
+function titleFromSeriesUrl(url: string) {
+  const slug = new URL(url).pathname.split('/').filter(Boolean).at(-1) ?? '';
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function parseGenericSeriesList($: ReturnType<typeof loadHtml>, sourceId: string) {
+  const seen = new Set<string>();
+  const items: Manga[] = [];
+
+  $('a[href*="/baca/series/"]').each((_, element) => {
+    const link = $(element);
+    const url = absoluteUrl(SITE_BASE, link.attr('href'));
+    if (!url || seen.has(url)) return;
+
+    const card = link.closest('.flexbox4-item, .flexbox2-item, article, li, .bs, .bsx').first();
+    const scope = card.length ? card : link.parent();
+    const image = link.find('img').first().length ? link.find('img').first() : scope.find('img').first();
+    const title =
+      clean(link.attr('title')) ||
+      clean(image.attr('alt')) ||
+      clean(link.find('[title]').first().attr('title')) ||
+      clean(link.text()) ||
+      titleFromSeriesUrl(url);
+    if (!title) return;
+
+    seen.add(url);
+    items.push({
+      id: encodeId(url),
+      sourceId,
+      title,
+      coverUrl: imageSrc($, image, SITE_BASE),
+      format: formatFrom(clean(scope.find('.type, .mgen').first().text())),
+      status: statusFrom(clean(scope.find('.status').first().text())),
+      genres: scope
+        .find('.genres a, .mgen a')
+        .map((__, genre) => clean($(genre).text()))
+        .get()
+        .filter(Boolean),
+      url
+    });
+  });
+
+  return items;
+}
+
+export function parseCrotpediaListHtml(html: string, sourceId = 'crotpedia') {
+  return parseGenericSeriesList(loadHtml(html), sourceId);
+}
+
 export class CrotpediaSource implements MangaSource {
   readonly id: string;
   readonly name = 'CrotPedia';
@@ -57,7 +110,8 @@ export class CrotpediaSource implements MangaSource {
     const url = new URL(targetPage > 1 ? `/page/${targetPage}/` : '/', SITE_BASE);
     const $ = loadHtml(await this.fetch(url.toString()));
     const items = this.parseUpdateList($);
-    return { items, page: targetPage, hasNextPage: $('.pagination .next').length > 0 || items.length >= PAGE_LIMIT };
+    this.assertListParsed($, items);
+    return { items, page: targetPage, hasNextPage: this.hasNextPage($) || items.length >= PAGE_LIMIT };
   }
 
   async search(query: string, page: number): Promise<MangaListResult> {
@@ -67,7 +121,8 @@ export class CrotpediaSource implements MangaSource {
     url.searchParams.set('s', query.trim());
     const $ = loadHtml(await this.fetch(url.toString()));
     const items = this.parseSearchList($);
-    return { items, page: targetPage, hasNextPage: $('.pagination .next').length > 0 };
+    this.assertListParsed($, items);
+    return { items, page: targetPage, hasNextPage: this.hasNextPage($) };
   }
 
   async getDetail(mangaId: string): Promise<MangaDetail> {
@@ -155,19 +210,39 @@ export class CrotpediaSource implements MangaSource {
   }
 
   private parseUpdateList($: ReturnType<typeof loadHtml>) {
-    const items = $('.flexbox4-item')
+    const legacyItems = $('.flexbox4-item')
       .map((_, element) => this.parseUpdateItem($, $(element)))
       .get()
       .filter(Boolean) as Manga[];
+    const items = legacyItems.length ? legacyItems : parseGenericSeriesList($, this.id);
     return items.slice(0, PAGE_LIMIT);
   }
 
   private parseSearchList($: ReturnType<typeof loadHtml>) {
-    const items = $('.flexbox2-item')
+    const legacyItems = $('.flexbox2-item')
       .map((_, element) => this.parseSearchItem($, $(element)))
       .get()
       .filter(Boolean) as Manga[];
-    return items;
+    return legacyItems.length ? legacyItems : parseGenericSeriesList($, this.id);
+  }
+
+  private hasNextPage($: ReturnType<typeof loadHtml>) {
+    return $('.pagination .next, a.next, a.next.page-numbers, a[rel="next"]').length > 0;
+  }
+
+  private assertListParsed($: ReturnType<typeof loadHtml>, items: Manga[]) {
+    if (items.length) return;
+    const body = clean($('body').text());
+    if (/Login terlebih dahulu|Log in|Masuk terlebih dahulu/i.test(body) || $('form[action*="login"]').length) {
+      throw Object.assign(new Error('CrotPedia meminta login. Simpan cookie sesi login lewat Unlock Source.'), {
+        status: 401,
+        code: 'SOURCE_AUTH_REQUIRED'
+      });
+    }
+    throw Object.assign(new Error('Markup daftar CrotPedia tidak dikenali atau respons source tidak lengkap.'), {
+      status: 502,
+      code: 'SOURCE_PARSE_FAILED'
+    });
   }
 
   private parseUpdateItem($: ReturnType<typeof loadHtml>, node: ReturnType<ReturnType<typeof loadHtml>>) {

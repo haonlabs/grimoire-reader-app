@@ -1,0 +1,21 @@
+services:
+  browser-gateway:
+    build: .
+    restart: unless-stopped
+    environment:
+      GATEWAY_TOKEN: ${GATEWAY_TOKEN:?Set GATEWAY_TOKEN in browser-gateway/.env}
+      HEADLESS: ${HEADLESS:-true}
+      CDP_URL: ${CDP_URL:-}
+      CROTPEDIA_USERNAME: ${CROTPEDIA_USERNAME:-}
+      CROTPEDIA_PASSWORD: ${CROTPEDIA_PASSWORD:-}
+      BROWSER_TRANSPORT: ${BROWSER_TRANSPORT:-auto}
+      NAVIGATION_TIMEOUT_MS: 60000
+      CHALLENGE_TIMEOUT_MS: 45000
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - chromium-data:/data
+    shm_size: 1gb
+
+volumes:
+  chromium-data:

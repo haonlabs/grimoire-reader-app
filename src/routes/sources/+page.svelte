@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CheckCircle2, CircleOff, ExternalLink, KeyRound, Search, Star, StarOff, X } from 'lucide-svelte';
+  import { CheckCircle2, CircleOff, Download, ExternalLink, KeyRound, Search, Star, StarOff, X } from 'lucide-svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Input from '$lib/components/ui/Input.svelte';
@@ -195,9 +195,20 @@
 
 <Card class="mb-5 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
   <div>
+    <p class="text-sm font-semibold text-white">Protected source browser extension</p>
+    <p class="mt-1 text-sm leading-6 text-white/55">Use the local browser bridge for CrotPedia and DoujinDesu without keeping permanent source tabs open.</p>
+  </div>
+  <a class="focus-ring inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-bold text-white" href="/extension">
+    <Download size={17} />
+    Download
+  </a>
+</Card>
+
+<Card class="mb-5 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+  <div>
     <p class="text-sm font-semibold text-white">Adult mode</p>
     <p class="mt-1 text-sm leading-6 text-white/55">
-      Saat aktif, source adult seperti CrotPedia, Doujinpoi, KomikTap, Sasangeyou, MiHentai, dan ToonGod akan muncul di Source Manager.
+      Saat aktif, source adult seperti CrotPedia, Doujinpoi, DoujinDesu, KomikTap, Sasangeyou, MiHentai, dan ToonGod akan muncul di Source Manager.
     </p>
     {#if !adultModeEnabled && hiddenAdultCount > 0}
       <p class="mt-1 text-xs text-white/40">{hiddenAdultCount} source adult sedang disembunyikan.</p>
@@ -331,6 +342,13 @@
           Open Source
         </a>
         <p>Buka source sampai normal, lalu paste cookie domain source di bawah. Formatnya seperti <span class="font-mono text-white">cf_clearance=...; __cf_bm=...</span>.</p>
+        {#if unlockSource.id === 'crotpedia'}
+          <p class="rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-amber-100">
+            CrotPedia diblokir oleh sebagian DNS ISP Indonesia. Jika tombol Open Source dialihkan ke Internet Positif,
+            aktifkan Private DNS atau VPN terlebih dahulu. Selesaikan challenge dan login sebelum menyalin seluruh cookie
+            <span class="font-mono">crotpedia.net</span>.
+          </p>
+        {/if}
       </div>
 
       <label class="mt-4 grid gap-2 text-sm font-medium text-white/70">

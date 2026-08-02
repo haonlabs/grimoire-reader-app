@@ -8,8 +8,12 @@ import { env } from '$env/dynamic/private';
 import type { MangaFormat, MangaStatus } from '$lib/sources/types';
 
 const REQUEST_TIMEOUT = 15_000;
+const BROWSER_GATEWAY_TIMEOUT = 75_000;
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36';
+const TRUSTED_DNS_FALLBACK_HOSTS = new Set(['crotpedia.net', 'doujin.desu.xxx']);
+const BROWSER_GATEWAY_SOURCE_IDS = new Set(['crotpedia', 'doujindesu']);
+const DNS_CACHE_TTL = 5 * 60_000;
 
 const relaxedAgent = new Agent({
   connect: {
@@ -17,6 +21,7 @@ const relaxedAgent = new Agent({
   }
 });
 const execFileAsync = promisify(execFile);
+const trustedDnsCache = new Map<string, { addresses: string[]; expiresAt: number }>();
 
 type SourceFetchInit = RequestInit & {
   body?: BodyInit | null;
@@ -133,15 +138,94 @@ function sourceUserAgent() {
 function isBlockedResponse(body: string, effectiveUrl: string) {
   return (
     effectiveUrl.includes('internet-positif') ||
-    /internet\s*positif|Imunify360|bot-protection|Access denied|cf-mitigated|Just a moment|One moment,\s*please|Attention Required|cf[_-]challenge|challenge-platform|webdriverCheck|__CF\$cv|cf_clearance/i.test(body)
+    /internet\s*positif|Imunify360|bot-protection|Access denied|cf-mitigated|Just a moment|Tunggu sebentar|Melakukan verifikasi keamanan|Menunggu response|One moment,\s*please|Attention Required|cf[_-]challenge|challenge-platform|webdriverCheck|__CF\$cv|cf_clearance/i.test(body)
   );
 }
 
 function blockedError(effectiveUrl: string) {
-  return Object.assign(new Error(`Source diblokir atau meminta challenge browser (${effectiveUrl}).`), {
+  const message = effectiveUrl.includes('internet-positif')
+    ? `Source diblokir oleh DNS ISP (${effectiveUrl}). Coba Private DNS/VPN, lalu buka Unlock Source jika situs meminta challenge.`
+    : `Source meminta challenge browser (${effectiveUrl}). Buka situs sampai lolos challenge/login, lalu simpan cookie dan User-Agent lewat Unlock Source.`;
+  return Object.assign(new Error(message), {
     status: 403,
     code: 'SOURCE_BLOCKED'
   });
+}
+
+function browserGatewayConfig(sourceId?: string) {
+  if (!sourceId || !BROWSER_GATEWAY_SOURCE_IDS.has(sourceId)) return null;
+  const baseUrl = env.GRIMOIRE_BROWSER_GATEWAY_URL?.trim().replace(/\/$/, '');
+  const token = env.GRIMOIRE_BROWSER_GATEWAY_TOKEN?.trim();
+  if (!baseUrl || !token) return null;
+  try {
+    const parsed = new URL(baseUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    return { baseUrl, token };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTextWithBrowserGateway(url: string, init: SourceFetchInit) {
+  const config = browserGatewayConfig(init.sourceId);
+  if (!config) return null;
+
+  const response = await undiciFetch(`${config.baseUrl}/v1/fetch`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${config.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      url,
+      headers: Object.fromEntries(
+        headersToEntries(init.headers).filter(([name]) => ['accept', 'x-app-secret'].includes(name.toLowerCase()))
+      )
+    }),
+    signal: AbortSignal.timeout(BROWSER_GATEWAY_TIMEOUT)
+  });
+  const payload = (await response.json()) as { error?: string; finalUrl?: string; html?: string };
+  if (!response.ok || typeof payload.html !== 'string') {
+    throw Object.assign(new Error(payload.error || `Browser gateway returned HTTP ${response.status}`), {
+      status: response.status >= 400 ? response.status : 502,
+      code: 'BROWSER_GATEWAY_FAILED'
+    });
+  }
+  const finalUrl = payload.finalUrl || url;
+  if (isBlockedResponse(payload.html, finalUrl)) throw blockedError(finalUrl);
+  return payload.html;
+}
+
+async function trustedDnsAddresses(url: string) {
+  const parsed = new URL(url);
+  const hostname = parsed.hostname.toLowerCase();
+  if (parsed.protocol !== 'https:' || !TRUSTED_DNS_FALLBACK_HOSTS.has(hostname)) return [];
+
+  const cached = trustedDnsCache.get(hostname);
+  if (cached && cached.expiresAt > Date.now()) return cached.addresses;
+
+  try {
+    const response = await undiciFetch(
+      `https://1.1.1.1/dns-query?name=${encodeURIComponent(hostname)}&type=A`,
+      {
+        dispatcher: relaxedAgent,
+        headers: { Accept: 'application/dns-json' },
+        signal: AbortSignal.timeout(5_000)
+      }
+    );
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { Answer?: Array<{ data?: string; type?: number }> };
+    const addresses = (payload.Answer ?? [])
+      .filter((answer) => answer.type === 1 && /^\d{1,3}(?:\.\d{1,3}){3}$/.test(answer.data ?? ''))
+      .map((answer) => answer.data as string);
+    if (addresses.length) {
+      trustedDnsCache.set(hostname, { addresses, expiresAt: Date.now() + DNS_CACHE_TTL });
+    }
+    return addresses;
+  } catch {
+    return [];
+  }
 }
 
 async function fetchTextWithCurl(url: string, init: SourceFetchInit) {
@@ -157,6 +241,11 @@ async function fetchTextWithCurl(url: string, init: SourceFetchInit) {
     '-w',
     `\n${statusMarker}%{http_code} %{url_effective}`
   ];
+  const trustedAddresses = await trustedDnsAddresses(url);
+  if (trustedAddresses.length) {
+    const parsed = new URL(url);
+    args.push('--resolve', `${parsed.hostname}:443:${trustedAddresses[0]}`);
+  }
   for (const [name, value] of headersToEntries(init.headers)) {
     args.push('-H', `${name}: ${value}`);
   }
@@ -212,8 +301,9 @@ export async function fetchText(url: string, init: SourceFetchInit = {}) {
       signal: controller.signal
     } as Parameters<typeof undiciFetch>[1]);
     if (!response.ok) {
-      if (response.status === 403 || response.status === 429) {
-        return await fetchTextWithCurl(url, { ...init, headers });
+      const responseBody = await response.text();
+      if (response.status === 403 || response.status === 429 || isBlockedResponse(responseBody, response.url || url)) {
+        throw blockedError(response.url || url);
       }
       throw Object.assign(new Error(`Source returned HTTP ${response.status}`), {
         status: response.status,
@@ -224,11 +314,19 @@ export async function fetchText(url: string, init: SourceFetchInit = {}) {
     if (isBlockedResponse(text, response.url || url)) throw blockedError(response.url || url);
     return text;
   } catch (error) {
+    let fallbackError: unknown;
     try {
       return await fetchTextWithCurl(url, { ...init, headers });
-    } catch {
-      // Preserve the original network error; it usually carries the more useful source failure.
+    } catch (curlError) {
+      fallbackError = curlError;
     }
+    try {
+      const gatewayResult = await fetchTextWithBrowserGateway(url, init);
+      if (gatewayResult !== null) return gatewayResult;
+    } catch (gatewayError) {
+      fallbackError = gatewayError;
+    }
+    if (fallbackError instanceof Error && 'status' in fallbackError) throw fallbackError;
     if (error instanceof Error && 'status' in error) throw error;
     const message = error instanceof Error ? error.message : 'network request failed';
     throw Object.assign(new Error(`Source tidak bisa diakses dari jaringan ini (${message}).`), {

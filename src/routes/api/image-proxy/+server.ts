@@ -8,6 +8,8 @@ const IMAGE_TIMEOUT = 15_000;
 const CACHE_VERSION = 'v2';
 const CACHE_DIR = path.join(process.cwd(), '.cache', 'image-proxy');
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
+const IMAGE_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36';
 
 interface CachedImageMeta {
   url: string;
@@ -57,6 +59,8 @@ function allowedImageHost(hostname: string) {
     hostname === 'cdn.komikcast.com' ||
     hostname === 'cdn.asurascans.com' ||
     hostname.endsWith('.asurascans.com') ||
+    hostname === 'imgbox.com' ||
+    hostname.endsWith('.imgbox.com') ||
     hostname.endsWith('.imgkc1.my.id') ||
     hostname === 'assets.shngm.id' ||
     hostname === 'storage.shngm.id' ||
@@ -73,6 +77,10 @@ function allowedImageHost(hostname: string) {
     hostname.endsWith('.manhwature.com') ||
     hostname === 'desu.photos' ||
     hostname.endsWith('.desu.photos') ||
+    hostname === 'desu.xxx' ||
+    hostname.endsWith('.desu.xxx') ||
+    hostname === 'desu.pics' ||
+    hostname.endsWith('.desu.pics') ||
     hostname === 'images.manhwaland.email' ||
     hostname === 'img.manhwaland.email' ||
     hostname === 'cover.eromanga.cfd' ||
@@ -87,6 +95,18 @@ function allowedImageHost(hostname: string) {
 
 function cacheKey(raw: string) {
   return createHash('sha256').update(`${CACHE_VERSION}:${raw}`).digest('hex');
+}
+
+function imageRequestHeaders(target: URL) {
+  const isDoujinDesuCdn =
+    target.hostname === 'desu.xxx' ||
+    target.hostname.endsWith('.desu.xxx') ||
+    target.hostname === 'desu.pics' ||
+    target.hostname.endsWith('.desu.pics');
+  return {
+    Referer: isDoujinDesuCdn ? 'https://doujin.desu.xxx/' : `${target.origin}/`,
+    'User-Agent': IMAGE_USER_AGENT
+  };
 }
 
 function cachePaths(raw: string) {
@@ -157,20 +177,14 @@ export async function GET({ url, fetch }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT);
   let response = await fetch(imageTarget, {
-    headers: {
-      Referer: `${imageTarget.origin}/`,
-      'User-Agent': 'GrimoireReader/0.1'
-    },
+    headers: imageRequestHeaders(imageTarget),
     signal: controller.signal
   }).finally(() => clearTimeout(timer));
 
   const mangaDexFallback = !response.ok ? mangadexDataSaverFallback(imageTarget) : null;
   if (mangaDexFallback) {
     response = await fetch(mangaDexFallback, {
-      headers: {
-        Referer: `${mangaDexFallback.origin}/`,
-        'User-Agent': 'GrimoireReader/0.1'
-      }
+      headers: imageRequestHeaders(mangaDexFallback)
     });
   }
 

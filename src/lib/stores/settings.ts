@@ -46,6 +46,7 @@ export const nativeSourceIds = [
   'mangaplus',
   'crotpedia',
   'doujinpoi',
+  'doujindesu',
   'dojinpoi',
   'komiku',
   'shinigami',
@@ -55,7 +56,16 @@ export const nativeSourceIds = [
   'mihentai',
   'toongod'
 ];
-export const adultModeSourceIds = ['crotpedia', 'doujinpoi', 'dojinpoi', 'komiktap', 'sasangeyou', 'mihentai', 'toongod'];
+export const adultModeSourceIds = [
+  'crotpedia',
+  'doujinpoi',
+  'doujindesu',
+  'dojinpoi',
+  'komiktap',
+  'sasangeyou',
+  'mihentai',
+  'toongod'
+];
 export const defaultEnabledSources = ['shinigami'];
 export const enabledSources = localStore<string[]>('manga_sources_enabled', defaultEnabledSources);
 

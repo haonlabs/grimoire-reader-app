@@ -2,6 +2,8 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page as pageStore } from '$app/stores';
+  import ExploreHero from '$lib/components/explore/ExploreHero.svelte';
+  import ExploreNotice from '$lib/components/explore/ExploreNotice.svelte';
   import MangaCard from '$lib/components/manga/MangaCard.svelte';
   import MangaGrid from '$lib/components/manga/MangaGrid.svelte';
   import MangaGridSkeleton from '$lib/components/manga/MangaGridSkeleton.svelte';
@@ -12,10 +14,9 @@
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import type { Manga, MangaListResult, SourceMetadata } from '$lib/sources/types';
   import { enabledSources, isAdultModeSource, settings } from '$lib/stores/settings';
-  import { proxiedImageUrl } from '$lib/utils/image';
   import { mangaFormatLabel } from '$lib/utils/mangaFormat';
   import { sourceFetch } from '$lib/utils/sourceUnlock';
-  import { ChevronRight, Megaphone } from 'lucide-svelte';
+  import { PlugZap, RotateCcw } from 'lucide-svelte';
   import { onDestroy, onMount } from 'svelte';
 
   export let data: { sources?: SourceMetadata[] };
@@ -25,6 +26,13 @@
   let page = 1;
   let loading = false;
   let error = '';
+  let errorCode = '';
+  let bridgeState: 'idle' | 'starting' | 'waiting' | 'connected' | 'failed' = 'idle';
+  let bridgeMessage = '';
+  let bridgeRecoveryId = 0;
+  let automaticBridgeRecoveryKey = '';
+  let closingCrotpediaTab = false;
+  const CROTPEDIA_RECOVERY_TAB_KEY = 'grimoire_crotpedia_recovery_tab';
   let hasNextPage = false;
   let view: 'grid' | 'list' = 'grid';
   let sort = 'updated';
@@ -38,6 +46,7 @@
   let recoveryTimer: number | undefined;
   let pendingPage: number | null = null;
   let formatTab = 'Manhwa';
+  let updateFormatTab = 'All';
   let updateTab = 'Project';
 
   $: sources = (data.sources ?? []).filter(
@@ -53,6 +62,7 @@
   $: sourceName = sourceMeta?.name ?? sourceId;
   $: sourceNames = Object.fromEntries(sources.map((source) => [source.id, source.name]));
   $: adultMode = isAdultModeSource(sourceId) ? 'include' : '';
+  $: requestedFormat = updateFormatTab === 'All' ? '' : updateFormatTab.toLowerCase();
   $: requestedPage = Math.max(1, Number($pageStore.url.searchParams.get('page') ?? 1));
   $: visibleItems = status === 'all' ? items : items.filter((item) => item.status === status);
   $: hero = featured[0] ?? visibleItems[0];
@@ -60,8 +70,16 @@
     mangaFormatLabel(item).toLowerCase() === formatTab.toLowerCase()
   );
   $: recommended = (recommendedMatches.length ? recommendedMatches : visibleItems).slice(0, 6);
-  $: updateItems = (updateTab === 'Mirror' ? [...visibleItems].reverse() : visibleItems).slice(0, 24);
-  $: key = `${sourceId}:${sort}:${adultMode}:${requestedPage}`;
+  $: updateFormatMatches =
+    updateFormatTab === 'All'
+      ? visibleItems
+      : visibleItems.filter((item) => mangaFormatLabel(item).toLowerCase() === updateFormatTab.toLowerCase());
+  $: updateItems = (updateTab === 'Mirror' ? [...updateFormatMatches].reverse() : updateFormatMatches).slice(0, 24);
+  $: key = `${sourceId}:${sort}:${adultMode}:${requestedFormat}:${requestedPage}`;
+  $: bridgeRecoveryAvailable =
+    sourceId === 'crotpedia' &&
+    (['BROWSER_GATEWAY_FAILED', 'SOURCE_BLOCKED', 'SOURCE_AUTH_REQUIRED'].includes(errorCode) ||
+      /browser extension is not connected|browser gateway|challenge browser|meminta login/i.test(error));
   $: if (browser && sources.length && sourceId !== $settings.defaultSourceId) {
     settings.update((value) => ({ ...value, defaultSourceId: sourceId }));
   }
@@ -107,9 +125,13 @@
     loading = true;
     loadingStartedAt = Date.now();
     error = '';
+    errorCode = '';
     const nextFilters = [{ id: 'sort', value: sort }];
     if (adultMode) {
       nextFilters.push({ id: 'adultMode', value: adultMode });
+    }
+    if (requestedFormat) {
+      nextFilters.push({ id: 'type', value: requestedFormat });
     }
     const filters = encodeURIComponent(JSON.stringify(nextFilters));
     try {
@@ -118,8 +140,8 @@
       });
       if (currentRequest !== requestId) return;
       if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error ?? 'Source failed');
+        const body = (await response.json()) as { code?: string; error?: string };
+        throw Object.assign(new Error(body.error ?? 'Source failed'), { code: body.code ?? '' });
       }
       const result = (await response.json()) as MangaListResult;
       if (currentRequest !== requestId) return;
@@ -127,12 +149,16 @@
       page = result.page;
       hasNextPage = result.hasNextPage;
       featured = result.items.slice(0, 6);
+      if (sourceId === 'crotpedia' && sessionStorage.getItem(CROTPEDIA_RECOVERY_TAB_KEY) === '1') {
+        void closeCrotpediaRecoveryTab();
+      }
       if (options.scrollToTop) {
         window.scrollTo({ top: 0, behavior: 'auto' });
       }
     } catch (err) {
       if (currentRequest !== requestId) return;
       error = err instanceof Error && err.name === 'AbortError' ? 'Source terlalu lama merespons. Coba refresh atau pilih source lain.' : err instanceof Error ? err.message : 'Unable to load manga';
+      errorCode = typeof err === 'object' && err && 'code' in err ? String(err.code) : '';
       items = [];
       featured = [];
     } finally {
@@ -140,6 +166,87 @@
       if (activeController === controller) activeController = undefined;
       if (currentRequest === requestId) loading = false;
       if (currentRequest === requestId) pendingPage = null;
+      if (
+        currentRequest === requestId &&
+        sourceId === 'crotpedia' &&
+        (['BROWSER_GATEWAY_FAILED', 'SOURCE_BLOCKED'].includes(errorCode) ||
+          /browser extension is not connected|browser gateway|challenge browser/i.test(error)) &&
+        automaticBridgeRecoveryKey !== key
+      ) {
+        automaticBridgeRecoveryKey = key;
+        void activateCrotpediaBridge();
+      }
+    }
+  }
+
+  function wait(milliseconds: number) {
+    return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+  }
+
+  async function closeCrotpediaRecoveryTab() {
+    if (closingCrotpediaTab) return;
+    closingCrotpediaTab = true;
+    try {
+      const response = await fetch('/api/local-bridge', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ closeBrowser: true })
+      });
+      if (response.ok) sessionStorage.removeItem(CROTPEDIA_RECOVERY_TAB_KEY);
+    } finally {
+      closingCrotpediaTab = false;
+    }
+  }
+
+  async function activateCrotpediaBridge() {
+    if (bridgeState === 'starting' || bridgeState === 'waiting') return;
+    const recoveryId = ++bridgeRecoveryId;
+    bridgeState = 'starting';
+    bridgeMessage = 'Menyalakan helper CrotPedia…';
+    try {
+      const needsBrowserInteraction = ['SOURCE_BLOCKED', 'SOURCE_AUTH_REQUIRED'].includes(errorCode);
+      if (needsBrowserInteraction) sessionStorage.setItem(CROTPEDIA_RECOVERY_TAB_KEY, '1');
+      const response = await fetch('/api/local-bridge', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ openBrowser: needsBrowserInteraction })
+      });
+      const body = (await response.json()) as { alreadyConnected?: boolean; error?: string; started?: boolean };
+      if (!response.ok) throw new Error(body.error ?? 'Helper tidak dapat dijalankan dari web ini.');
+      if (needsBrowserInteraction) {
+        bridgeState = 'waiting';
+        bridgeMessage = 'Browser verifikasi dibuka. Setelah selesai, Grimoire akan mencoba lagi…';
+        await wait(10_000);
+        if (recoveryId !== bridgeRecoveryId) return;
+        await loadList(requestedPage);
+        return;
+      }
+      if (body.alreadyConnected) {
+        bridgeState = 'connected';
+        bridgeMessage = 'Bridge tersambung. Memuat ulang CrotPedia…';
+        await loadList(requestedPage);
+        return;
+      }
+
+      bridgeState = 'waiting';
+      bridgeMessage = body.started ? 'Helper dibuka. Menunggu browser tersambung…' : 'Helper sedang dimulai…';
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        await wait(1_000);
+        if (recoveryId !== bridgeRecoveryId) return;
+        const statusResponse = await fetch('/api/local-bridge', { cache: 'no-store' });
+        if (!statusResponse.ok) continue;
+        const status = (await statusResponse.json()) as { extensionConnected?: boolean };
+        if (!status.extensionConnected) continue;
+        bridgeState = 'connected';
+        bridgeMessage = 'Bridge tersambung. Memuat ulang CrotPedia…';
+        await loadList(requestedPage);
+        return;
+      }
+      throw new Error('Browser helper belum tersambung. Gunakan tombol di bawah untuk mencoba lagi.');
+    } catch (recoveryError) {
+      if (recoveryId !== bridgeRecoveryId) return;
+      bridgeState = 'failed';
+      bridgeMessage = recoveryError instanceof Error ? recoveryError.message : 'Helper CrotPedia gagal dijalankan.';
     }
   }
 
@@ -164,6 +271,7 @@
   });
 
   onDestroy(() => {
+    bridgeRecoveryId += 1;
     activeController?.abort();
     if (!browser) return;
     if (activeTimeout) window.clearTimeout(activeTimeout);
@@ -173,56 +281,23 @@
 
   function setSource(event: Event) {
     const target = event.target as HTMLSelectElement;
+    bridgeRecoveryId += 1;
+    bridgeState = 'idle';
+    bridgeMessage = '';
+    automaticBridgeRecoveryKey = '';
     settings.update((value) => ({ ...value, defaultSourceId: target.value }));
     setExplorePage(1);
   }
+
+  function setUpdateFormat(tab: string) {
+    if (updateFormatTab === tab) return;
+    updateFormatTab = tab;
+    if (requestedPage !== 1) void setExplorePage(1);
+  }
 </script>
 
-<section class="mb-5 grid gap-3 lg:grid-cols-[1fr_20rem]">
-  <a
-    class="group relative min-h-[18rem] overflow-hidden rounded-lg border border-white/10 bg-[#141416]"
-    href={hero ? `/manga/${hero.sourceId}/${hero.id}` : '/search'}
-  >
-    {#if hero?.coverUrl}
-      <img
-        class="absolute inset-0 h-full w-full object-cover opacity-55 transition duration-500 group-hover:scale-[1.03]"
-        src={proxiedImageUrl(hero.coverUrl)}
-        alt={hero.title}
-        loading="eager"
-        fetchpriority="high"
-        decoding="async"
-      />
-    {:else}
-      <Skeleton class="absolute inset-0 rounded-none" />
-    {/if}
-    <div class="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/15"></div>
-    <div class="relative flex min-h-[18rem] max-w-2xl flex-col justify-end p-5 sm:p-7">
-      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-violet-300">{sourceName}</p>
-      <h1 class="line-clamp-2 text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-        {hero?.title ?? 'GRIMOIRE'}
-      </h1>
-      <p class="mt-3 line-clamp-3 text-sm leading-6 text-white/70">
-        {hero?.description ?? 'Baca manhwa, manga, dan manhua dengan tampilan clean seperti Shinigami.'}
-      </p>
-      <div class="mt-5 inline-flex w-fit items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white">
-        Baca
-        <ChevronRight size={17} />
-      </div>
-    </div>
-  </a>
-
-  <section class="rounded-lg border border-white/10 bg-[#141416] p-4">
-    <div class="mb-3 flex items-center gap-2">
-      <Megaphone size={18} class="text-violet-300" />
-      <h2 class="text-base font-semibold text-white">Pengumuman</h2>
-    </div>
-    <div class="space-y-3 text-sm leading-6 text-white/65">
-      <p>Source aktif: {sourceName}</p>
-      <p>Reading mode dibuat scrolling clean, menu muncul saat area baca di-tap.</p>
-      <p>Library, history, dan setting tetap tersimpan lokal di browser ini.</p>
-    </div>
-  </section>
-</section>
+<ExploreHero {hero} {sourceName} />
+<ExploreNotice {sourceName} />
 
 <Card class="mb-5 flex flex-col gap-3 p-4 lg:flex-row lg:items-end lg:justify-between">
   <label class="grid gap-1 text-xs font-medium uppercase tracking-wide text-white/55">
@@ -265,7 +340,38 @@
 {/if}
 
 {#if error}
-  <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>
+  <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100">
+    <div class="flex items-start gap-3">
+      {#if bridgeRecoveryAvailable}
+        <PlugZap class="mt-0.5 shrink-0 text-violet-300" size={20} />
+      {/if}
+      <div class="min-w-0 flex-1">
+        <p>{error}</p>
+        {#if bridgeRecoveryAvailable}
+          <p class="mt-2 text-red-100/65">
+            Grimoire bisa mencoba menyalakan browser helper di Mac ini dan memuat source kembali secara otomatis.
+          </p>
+          {#if bridgeMessage}
+            <p class="mt-2 text-xs font-medium text-violet-200" aria-live="polite">{bridgeMessage}</p>
+          {/if}
+          <div class="mt-4 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              loading={bridgeState === 'starting' || bridgeState === 'waiting'}
+              on:click={activateCrotpediaBridge}
+            >
+              <PlugZap size={16} />
+              Aktifkan CrotPedia
+            </Button>
+            <Button variant="outline" size="sm" disabled={loading} on:click={() => loadList(requestedPage)}>
+              <RotateCcw size={16} />
+              Coba lagi
+            </Button>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
 {:else if loading && !items.length}
   <section class="mb-8" aria-label="Loading featured manga">
     <Skeleton class="mb-3 h-6 w-44" />
@@ -277,11 +383,23 @@
   </section>
   <MangaGridSkeleton {view} />
 {:else}
-  {#if updateItems.length}
+  {#if visibleItems.length}
     <section>
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-xl font-bold text-white">Update</h2>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <div class="flex rounded-lg border border-white/10 bg-[#141416] p-1">
+            {#each ['All', 'Manhwa', 'Manga', 'Manhua'] as tab}
+              <Button
+                variant={updateFormatTab === tab ? 'default' : 'ghost'}
+                size="sm"
+                class="border-0"
+                on:click={() => setUpdateFormat(tab)}
+              >
+                {tab}
+              </Button>
+            {/each}
+          </div>
           <div class="flex rounded-lg border border-white/10 bg-[#141416] p-1">
             {#each ['Project', 'Mirror'] as tab}
               <Button
@@ -296,7 +414,13 @@
           </div>
         </div>
       </div>
-      <MangaGrid items={updateItems} {view} {sourceNames} />
+      {#if updateItems.length}
+        <MangaGrid items={updateItems} {view} {sourceNames} />
+      {:else}
+        <Card class="border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">
+          Tidak ada {updateFormatTab} dalam daftar update dari {sourceName}.
+        </Card>
+      {/if}
     </section>
   {:else}
     <Card class="border-ink/10 bg-white p-6 text-sm text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/60">

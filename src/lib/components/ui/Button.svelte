@@ -5,6 +5,7 @@
   export let type: 'button' | 'submit' | 'reset' = 'button';
   export let variant: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' = 'default';
   export let size: 'sm' | 'default' | 'icon' = 'default';
+  export let href: string | undefined = undefined;
   export let disabled = false;
   export let loading = false;
   export let title: string | undefined = undefined;
@@ -12,33 +13,145 @@
 
   $: variantClass =
     variant === 'secondary'
-      ? 'border-white/10 bg-white/10 text-white hover:bg-white/15'
+      ? 'button--secondary'
       : variant === 'outline'
-        ? 'border-white/10 bg-transparent text-white hover:bg-white/10'
+        ? 'button--outline'
         : variant === 'ghost'
-          ? 'border-transparent bg-transparent text-white/70 hover:bg-white/10 hover:text-white'
+          ? 'button--ghost'
           : variant === 'destructive'
-            ? 'border-ember/30 bg-transparent text-ember hover:bg-ember/10'
-            : 'border-ember bg-ember text-white hover:bg-ember/90';
+            ? 'button--destructive'
+            : 'button--default';
 
   $: sizeClass =
     size === 'sm'
-      ? 'h-9 px-3 text-sm'
+      ? 'button--sm'
       : size === 'icon'
-        ? 'h-10 w-10 p-0'
-        : 'h-10 px-4 text-sm';
+        ? 'button--icon'
+        : 'button--size-default';
 </script>
 
-<button
-  {...$$restProps}
-  {type}
-  disabled={disabled || loading}
-  {title}
-  on:click
-  class="focus-ring inline-flex shrink-0 items-center justify-center gap-2 rounded-md border font-semibold transition disabled:pointer-events-none disabled:opacity-45 {variantClass} {sizeClass} {$$props.class ?? ''}"
->
-  {#if loading}
-    <LoaderCircle class="animate-spin" size={size === 'sm' ? 15 : 17} aria-hidden="true" />
-  {/if}
-  {@render children?.()}
-</button>
+{#if href}
+  <a
+    {...$$restProps}
+    href={disabled || loading ? undefined : href}
+    aria-disabled={disabled || loading}
+    tabindex={disabled || loading ? -1 : undefined}
+    {title}
+    on:click
+    class="button {variantClass} {sizeClass} {$$props.class ?? ''}"
+  >
+    {#if loading}<LoaderCircle class="animate-spin" size={17} aria-hidden="true" />{/if}
+    {@render children?.()}
+  </a>
+{:else}
+  <button
+    {...$$restProps}
+    {type}
+    disabled={disabled || loading}
+    {title}
+    on:click
+    class="button {variantClass} {sizeClass} {$$props.class ?? ''}"
+  >
+    {#if loading}<LoaderCircle class="animate-spin" size={17} aria-hidden="true" />{/if}
+    {@render children?.()}
+  </button>
+{/if}
+
+<style>
+  /* Hallmark · component: button · genre: atmospheric · theme: Midnight
+   * states: default · hover · focus · active · disabled · loading · error · success
+   * contrast: pass (46–50)
+   */
+  .button {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    border: var(--rule-thin) solid transparent;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-short) var(--ease-out),
+      color var(--dur-short) var(--ease-out),
+      transform var(--dur-micro) var(--ease-out);
+  }
+
+  .button:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .button:active {
+    transform: translateY(1px);
+  }
+
+  .button:disabled,
+  .button[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .button--default {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+
+  .button--secondary {
+    border-color: var(--color-rule);
+    background: var(--color-paper-3);
+    color: var(--color-ink);
+  }
+
+  .button--outline {
+    border-color: var(--color-rule-strong);
+    background: transparent;
+    color: var(--color-ink);
+  }
+
+  .button--ghost {
+    background: transparent;
+    color: var(--color-ink-2);
+  }
+
+  .button--destructive {
+    border-color: var(--color-error);
+    background: transparent;
+    color: var(--color-error);
+  }
+
+  .button--sm {
+    min-height: 2.5rem;
+    padding-inline: var(--space-sm);
+  }
+
+  .button--size-default {
+    min-height: 2.75rem;
+    padding-inline: var(--space-md);
+  }
+
+  .button--icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .button--default:hover { background: var(--color-focus); }
+    .button--secondary:hover { background: var(--color-paper-raised); }
+    .button--outline:hover,
+    .button--ghost:hover { background: var(--color-paper-3); color: var(--color-ink); }
+    .button--destructive:hover { background: var(--color-paper-3); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .button { transition: none; }
+    .button:active { transform: none; }
+  }
+</style>

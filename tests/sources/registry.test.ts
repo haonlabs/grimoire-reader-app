@@ -19,6 +19,7 @@ describe('source registry', () => {
     expect(SOURCE_REGISTRY.mangaplus?.name).toBe('MANGA Plus');
     expect(SOURCE_REGISTRY.asurascans?.name).toBe('Asura Scans');
     expect(SOURCE_REGISTRY.doujinpoi?.name).toBe('Doujinpoi');
+    expect(SOURCE_REGISTRY.doujindesu?.name).toBe('DoujinDesu');
     expect(SOURCE_REGISTRY.komiku?.name).toBe('Komiku');
     expect(SOURCE_REGISTRY.shinigami?.name).toBe('Shinigami ID');
     expect(SOURCE_REGISTRY.komikcast?.name).toBe('Komikcast');

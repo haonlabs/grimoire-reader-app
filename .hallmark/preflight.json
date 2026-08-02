@@ -1,0 +1,9 @@
+{
+  "scannedAt": "2026-08-02",
+  "framework": "SvelteKit 2 with Svelte 5 and Tailwind CSS 3",
+  "fontStack": "Inter, ui-sans-serif, system-ui",
+  "palette": "Dark ink/paper with violet ember, moss, and gold accents",
+  "motion": "motion-cut",
+  "spacing": "Tailwind utility scale",
+  "preserve": ["dark reading environment", "violet accent", "existing routes and data behavior"]
+}

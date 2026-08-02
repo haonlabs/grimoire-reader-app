@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grimoire Protected Source Bridge</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="panel wide">
+      <p class="eyebrow">GRIMOIRE</p>
+      <h1>Protected Source Bridge</h1>
+      <p class="muted">Connect this browser session to the local OrbStack gateway. The token stays in local extension storage.</p>
+
+      <label>
+        Gateway URL
+        <input id="gatewayUrl" type="url" value="http://127.0.0.1:8787" />
+      </label>
+      <label>
+        Gateway token
+        <input id="gatewayToken" type="password" autocomplete="off" placeholder="Paste GATEWAY_TOKEN" />
+      </label>
+
+      <div class="actions">
+        <button id="save" type="button">Save and connect</button>
+        <button id="test" class="secondary" type="button">Test gateway</button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+
+      <section class="note">
+        <strong>First-time verification</strong>
+        <p>If CrotPedia or DoujinDesu shows a challenge, open that domain once in this browser and finish Cloudflare, then close the tab. CrotPedia also requires login. The extension reuses that browser session in the background.</p>
+      </section>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

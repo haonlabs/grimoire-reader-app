@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Grimoire Protected Source Bridge",
+  "version": "0.6.2",
+  "description": "Connects your verified Brave or Chrome profile to Grimoire's local hidden-renderer gateway without permanent source tabs.",
+  "permissions": ["scripting", "storage", "tabs"],
+  "host_permissions": [
+    "https://crotpedia.net/*",
+    "https://www.crotpedia.net/*",
+    "https://doujin.desu.xxx/*",
+    "http://127.0.0.1:8787/*",
+    "http://localhost:8787/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://crotpedia.net/*", "https://www.crotpedia.net/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Grimoire Protected Source Bridge",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

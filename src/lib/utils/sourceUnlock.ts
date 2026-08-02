@@ -2,8 +2,8 @@ import { browser } from '$app/environment';
 import { readLocalJson, writeLocalJson } from '$lib/utils/localStorage';
 
 const STORAGE_KEY = 'manga_source_unlock_cookies';
-const API_CACHE_PREFIX = 'grimoire_api_cache_v2:';
-const API_CACHE_INDEX_KEY = 'grimoire_api_cache_v2_index';
+const API_CACHE_PREFIX = 'grimoire_api_cache_v3:';
+const API_CACHE_INDEX_KEY = 'grimoire_api_cache_v3_index';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 const MAX_API_CACHE_ENTRIES = 120;
 const MAX_API_CACHE_BYTES = 4_000_000;
@@ -213,6 +213,8 @@ function cacheResponse(key: string, response: Response, ttl: number, url: string
     .clone()
     .text()
     .then((body) => {
+      const parsed = JSON.parse(body) as { items?: unknown[] };
+      if (Array.isArray(parsed.items) && parsed.items.length === 0) return;
       const now = Date.now();
       const entry: CachedApiResponse = {
         body,

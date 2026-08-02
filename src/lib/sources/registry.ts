@@ -1,6 +1,7 @@
 import { AsuraScansSource } from './asurascans';
 import { CrotpediaSource } from './crotpedia';
 import { DoujinpoiSource } from './doujinpoi';
+import { DoujinDesuSource } from './doujindesu';
 import { KomikcastSource } from './komikcast';
 import { KomikTapSource } from './komiktap';
 import { KomikuSource } from './komiku';
@@ -18,6 +19,7 @@ export const SOURCE_REGISTRY: Record<string, MangaSource> = {
   mangaplus: new MangaPlusSource(),
   crotpedia: new CrotpediaSource(),
   doujinpoi: new DoujinpoiSource(),
+  doujindesu: new DoujinDesuSource(),
   dojinpoi: new DoujinpoiSource('dojinpoi'),
   komiku: new KomikuSource(),
   shinigami: new ShinigamiSource(),
