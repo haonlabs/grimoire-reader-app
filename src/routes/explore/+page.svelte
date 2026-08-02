@@ -215,7 +215,7 @@
       if (!response.ok) throw new Error(body.error ?? 'Helper tidak dapat dijalankan dari web ini.');
       if (needsBrowserInteraction) {
         bridgeState = 'waiting';
-        bridgeMessage = 'Browser verifikasi dibuka. Setelah selesai, Grimoire akan mencoba lagi…';
+        bridgeMessage = 'Browser verifikasi dibuka di Mac. Setelah selesai, Grimoire akan mencoba lagi…';
         await wait(10_000);
         if (recoveryId !== bridgeRecoveryId) return;
         await loadList(requestedPage);
@@ -349,7 +349,7 @@
         <p>{error}</p>
         {#if bridgeRecoveryAvailable}
           <p class="mt-2 text-red-100/65">
-            Grimoire bisa mencoba menyalakan browser helper di Mac ini dan memuat source kembali secara otomatis.
+            Grimoire bisa meminta Mac host menyalakan browser helper dan memuat source kembali secara otomatis.
           </p>
           {#if bridgeMessage}
             <p class="mt-2 text-xs font-medium text-violet-200" aria-live="polite">{bridgeMessage}</p>

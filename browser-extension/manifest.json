@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Grimoire Protected Source Bridge",
-  "version": "0.6.2",
+  "version": "0.6.4",
   "description": "Connects your verified Brave or Chrome profile to Grimoire's local hidden-renderer gateway without permanent source tabs.",
   "permissions": ["scripting", "storage", "tabs"],
   "host_permissions": [

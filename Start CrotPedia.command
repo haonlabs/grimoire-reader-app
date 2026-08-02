@@ -102,6 +102,10 @@ extension_connected() {
     node -e 'let data=""; process.stdin.on("data", chunk => data += chunk); process.stdin.on("end", () => { try { process.exit(JSON.parse(data).extensionConnected ? 0 : 1); } catch { process.exit(1); } });'
 }
 
+helper_browser_running() {
+  pgrep -f -- "--user-data-dir=$browser_profile" >/dev/null 2>&1
+}
+
 if ! extension_connected; then
   for _ in {1..5}; do
     sleep 1
@@ -110,14 +114,18 @@ if ! extension_connected; then
 fi
 
 if ! extension_connected; then
-  print "Membuka browser khusus CrotPedia..."
-  open -na "$browser_name" --args \
-    --no-first-run \
-    --no-default-browser-check \
-    --user-data-dir="$browser_profile" \
-    --disable-extensions-except="$extension_dir" \
-    --load-extension="$extension_dir" \
-    "https://crotpedia.net/"
+  if helper_browser_running; then
+    print "Browser helper sudah berjalan. Menunggu extension tersambung..."
+  else
+    print "Membuka satu browser helper CrotPedia..."
+    open -na "$browser_name" --args \
+      --no-first-run \
+      --no-default-browser-check \
+      --user-data-dir="$browser_profile" \
+      --disable-extensions-except="$extension_dir" \
+      --load-extension="$extension_dir" \
+      "https://crotpedia.net/"
+  fi
 
   bridge_ready=false
   for _ in {1..30}; do
@@ -161,6 +169,11 @@ gateway_summary="$(node -e '
 
 if [[ "$gateway_status" == "200" && "$gateway_summary" == READY\|* ]]; then
   series_count="${${gateway_summary#READY|}%%|*}"
+  curl -fsS --max-time 8 \
+    -X POST "http://127.0.0.1:8787/v1/extension/close" \
+    -H "Authorization: Bearer $grimoire_gateway_token" \
+    -H "Content-Type: application/json" \
+    --data '{"url":"https://crotpedia.net/"}' >/dev/null 2>&1 || true
   print ""
   print "CrotPedia siap dipakai di Grimoire (${series_count} tautan seri terdeteksi)."
   osascript -e 'display notification "CrotPedia sudah siap dipakai" with title "Grimoire Reader"' >/dev/null 2>&1 || true

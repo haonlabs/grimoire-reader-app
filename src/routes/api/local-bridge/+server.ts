@@ -4,16 +4,16 @@ import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { isPrivateNetworkHostname } from '$lib/server/localNetwork';
 import type { RequestHandler } from './$types';
 
 const GATEWAY_HEALTH_URL = 'http://127.0.0.1:8787/health';
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const LAUNCH_COOLDOWN = 15_000;
 const execFileAsync = promisify(execFile);
 let lastLaunchAt = 0;
 
 function isLocalRequest(request: Request) {
-  return LOCAL_HOSTS.has(new URL(request.url).hostname);
+  return isPrivateNetworkHostname(new URL(request.url).hostname);
 }
 
 function isSameOrigin(request: Request) {

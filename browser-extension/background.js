@@ -1,5 +1,8 @@
+import { browserInteractionRequired } from './source-response.js';
+
 const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8787';
 const EXTENSION_VERSION = chrome.runtime.getManifest().version;
+const BACKGROUND_FETCH_TIMEOUT = 8_000;
 let activePoll;
 let launcherToken = '';
 
@@ -48,6 +51,13 @@ async function fetchThroughSourceTab(job) {
   if (sourceTab?.id === undefined) return { error: 'source tab not found', result: null };
 
   try {
+    if (sourceTab.windowId !== undefined) {
+      const sourceWindow = await chrome.windows.get(sourceTab.windowId);
+      if (sourceWindow.state !== 'minimized') {
+        await chrome.windows.update(sourceTab.windowId, { focused: false, state: 'minimized' });
+      }
+    }
+
     const currentUrl = sourceTab.url ? new URL(sourceTab.url) : null;
     const targetUrl = new URL(job.url);
     if (currentUrl?.href !== targetUrl.href) {
@@ -78,44 +88,68 @@ async function fetchThroughSourceTab(job) {
   }
 }
 
+async function fetchInBackground(job) {
+  const response = await fetch(job.url, {
+    credentials: 'include',
+    redirect: 'follow',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(BACKGROUND_FETCH_TIMEOUT),
+    headers: { Accept: 'text/html,application/xhtml+xml,application/json,*/*', ...(job.headers || {}) }
+  });
+  const html = await response.text();
+  return {
+    finalUrl: response.url,
+    html,
+    status: response.status
+  };
+}
+
 async function completeJob(settings, job) {
   let result;
+  let backgroundResult;
+  let backgroundError = '';
   try {
+    backgroundResult = await fetchInBackground(job);
+  } catch (error) {
+    backgroundError = error instanceof Error ? error.message : 'Background fetch failed';
+  }
+
+  if (
+    backgroundResult &&
+    !browserInteractionRequired(backgroundResult.status, backgroundResult.finalUrl, backgroundResult.html)
+  ) {
+    result = { id: job.id, ...backgroundResult, via: 'background' };
+  } else {
     const tabExecution = await fetchThroughSourceTab(job);
     if (tabExecution.result) {
-      result = { id: job.id, ...tabExecution.result, via: 'tab' };
+      result = { id: job.id, ...tabExecution.result, backgroundError, via: 'hidden-tab' };
+    } else if (backgroundResult) {
+      result = { id: job.id, ...backgroundResult, tabError: tabExecution.error, via: 'background' };
     } else {
-      const response = await fetch(job.url, {
-        credentials: 'include',
-        redirect: 'follow',
-        cache: 'no-store',
-        headers: { Accept: 'text/html,application/xhtml+xml,application/json,*/*', ...(job.headers || {}) }
-      });
       result = {
         id: job.id,
-        finalUrl: response.url,
-        html: await response.text(),
-        status: response.status,
-        tabError: tabExecution.error,
-        via: 'background'
+        error: tabExecution.error || backgroundError || 'Extension fetch failed',
+        status: 502
       };
     }
+  }
+
+  try {
+    await fetch(`${settings.gatewayUrl}/v1/extension/result`, {
+      method: 'POST',
+      headers: {
+        ...authorization(settings.gatewayToken),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(result)
+    });
   } catch (error) {
     result = {
       id: job.id,
-      error: error instanceof Error ? error.message : 'Extension fetch failed',
+      error: error instanceof Error ? error.message : 'Unable to return extension result',
       status: 502
     };
   }
-
-  await fetch(`${settings.gatewayUrl}/v1/extension/result`, {
-    method: 'POST',
-    headers: {
-      ...authorization(settings.gatewayToken),
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(result)
-  });
 }
 
 async function focusOrOpenSourceTab(settings, job) {
